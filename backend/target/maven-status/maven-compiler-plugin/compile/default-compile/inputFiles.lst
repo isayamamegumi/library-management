@@ -1,0 +1,14 @@
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\service\BookService.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\entity\BookAuthorId.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\repository\AuthorRepository.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\repository\BookRepository.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\entity\BookAuthor.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\controller\BookController.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\entity\Book.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\repository\BookAuthorRepository.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\controller\AuthorController.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\service\AuthorService.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\entity\Author.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\LibraryManagementApplication.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\dto\BookRequest.java
+C:\Users\marsh\OneDrive\デスクトップ\library-management\backend\src\main\java\com\library\management\config\WebConfig.java

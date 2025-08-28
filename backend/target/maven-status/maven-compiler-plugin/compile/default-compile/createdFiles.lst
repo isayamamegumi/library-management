@@ -1,0 +1,14 @@
+com\library\management\entity\Author.class
+com\library\management\repository\BookRepository.class
+com\library\management\config\WebConfig.class
+com\library\management\entity\BookAuthor.class
+com\library\management\service\AuthorService.class
+com\library\management\dto\BookRequest.class
+com\library\management\LibraryManagementApplication.class
+com\library\management\controller\BookController.class
+com\library\management\controller\AuthorController.class
+com\library\management\repository\AuthorRepository.class
+com\library\management\entity\Book.class
+com\library\management\repository\BookAuthorRepository.class
+com\library\management\service\BookService.class
+com\library\management\entity\BookAuthorId.class
