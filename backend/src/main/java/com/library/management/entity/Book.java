@@ -37,6 +37,9 @@ public class Book {
     @Column(name = "read_status")
     private String readStatus;
     
+    @Column(name = "user_id")
+    private Long userId;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
@@ -122,5 +125,13 @@ public class Book {
     
     public void setBookAuthors(List<BookAuthor> bookAuthors) {
         this.bookAuthors = bookAuthors;
+    }
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }
