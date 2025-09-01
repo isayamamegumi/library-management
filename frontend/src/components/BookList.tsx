@@ -21,17 +21,48 @@ const BookList: React.FC = () => {
   const loadBooks = async () => {
     try {
       setLoading(true);
-      const data = await bookApi.getAllBooks(
-        searchTerm || undefined, 
-        selectedReadStatus || undefined
-      );
-      setBooks(data);
-      setError('');
+      console.log('Making request to books API...');
+      const response = await fetch(`http://localhost:8080/api/books${buildQueryString()}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
+      if (response.status === 401) {
+        console.log('Unauthorized, redirecting to login');
+        window.location.href = '/login';
+        return;
+      }
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Books data received:', data);
+        setBooks(data);
+        setError('');
+      } else {
+        console.log('Response not ok, status:', response.status);
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`Failed to fetch books: ${response.status} - ${errorText}`);
+      }
     } catch (err) {
+      console.error('Error in loadBooks:', err);
       setError('書籍の読み込みに失敗しました');
     } finally {
       setLoading(false);
     }
+  };
+
+  const buildQueryString = () => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.append('search', searchTerm);
+    if (selectedReadStatus) params.append('readStatus', selectedReadStatus);
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : '';
   };
 
   const handleDelete = async (id: number) => {
@@ -109,7 +140,9 @@ const BookList: React.FC = () => {
 
       <div className="books-grid">
         {books.length === 0 ? (
-          <div className="no-books">書籍が見つかりませんでした</div>
+          <div className="no-books">
+            {searchTerm || selectedReadStatus ? '検索条件に一致する書籍が見つかりませんでした' : 'まだ書籍がありません'}
+          </div>
         ) : (
           books.map((book) => (
             <div key={book.id} className="book-card">

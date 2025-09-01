@@ -31,4 +31,18 @@ public interface BookRepository extends JpaRepository<Book, Long> {
            "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Book> searchBooks(@Param("keyword") String keyword);
+    
+    List<Book> findByUserId(Long userId);
+    
+    List<Book> findByUserIdAndReadStatus(Long userId, String readStatus);
+    
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.bookAuthors ba LEFT JOIN FETCH ba.author a " +
+           "WHERE b.userId = :userId AND (" +
+           "LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    List<Book> searchBooksByUser(@Param("userId") Long userId, @Param("keyword") String keyword);
+    
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.bookAuthors ba LEFT JOIN FETCH ba.author WHERE b.userId = :userId")
+    List<Book> findByUserIdWithAuthors(@Param("userId") Long userId);
 }
