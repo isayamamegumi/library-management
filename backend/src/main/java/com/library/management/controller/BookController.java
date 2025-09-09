@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,52 +24,31 @@ public class BookController {
     @Autowired
     private BookService bookService;
     
+    @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<List<Book>> getAllBooks(@RequestParam(required = false) String search,
                                                  @RequestParam(required = false) String readStatus) {
         try {
-            System.out.println("=== BookController.getAllBooks called ===");
-            System.out.println("Search: " + search);
-            System.out.println("ReadStatus: " + readStatus);
-            
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            System.out.println("Authentication: " + auth);
-            System.out.println("Authentication name: " + (auth != null ? auth.getName() : "null"));
-            System.out.println("Authentication authenticated: " + (auth != null ? auth.isAuthenticated() : "null"));
-            System.out.println("Authentication principal: " + (auth != null ? auth.getPrincipal() : "null"));
-            
-            String username = null;
-            
-            if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
-                username = auth.getName();
-                System.out.println("Authenticated user: " + username);
-            } else {
-                System.out.println("User not authenticated or is anonymous");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            }
+            String username = auth.getName();
             
             List<Book> books;
             
             if (search != null && !search.trim().isEmpty()) {
-                System.out.println("Searching books with: " + search + " for user: " + username);
                 books = bookService.searchBooksByUser(search, username);
             } else if (readStatus != null && !readStatus.trim().isEmpty()) {
-                System.out.println("Getting books by status: " + readStatus + " for user: " + username);
                 books = bookService.getBooksByReadStatusAndUser(readStatus, username);
             } else {
-                System.out.println("Getting all books for user: " + username);
                 books = bookService.getAllBooksByUser(username);
             }
             
-            System.out.println("Found " + books.size() + " books");
             return ResponseEntity.ok(books);
         } catch (Exception e) {
-            System.out.println("=== ERROR in BookController.getAllBooks ===");
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
     
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public ResponseEntity<Book> getBookById(@PathVariable Long id) {
         try {
@@ -80,19 +60,12 @@ public class BookController {
         }
     }
     
+    @PreAuthorize("isAuthenticated()")
     @PostMapping
     public ResponseEntity<Book> createBook(@Valid @RequestBody BookRequest bookRequest) {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            
-            String username = null;
-            if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
-                username = auth.getName();
-            }
-            
-            if (username == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            }
+            String username = auth.getName();
             
             Book book = new Book(
                 bookRequest.getTitle(),
@@ -109,6 +82,7 @@ public class BookController {
         }
     }
     
+    @PreAuthorize("@bookService.isOwner(#id, authentication.name) or hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Book> updateBook(@PathVariable Long id, 
                                           @Valid @RequestBody BookRequest bookRequest) {
@@ -130,6 +104,7 @@ public class BookController {
         }
     }
     
+    @PreAuthorize("@bookService.isOwner(#id, authentication.name) or hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBook(@PathVariable Long id) {
         try {
@@ -142,6 +117,7 @@ public class BookController {
         }
     }
     
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/isbn/{isbn}")
     public ResponseEntity<Book> getBookByIsbn(@PathVariable String isbn) {
         try {

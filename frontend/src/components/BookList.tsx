@@ -9,6 +9,7 @@ const BookList: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedReadStatus, setSelectedReadStatus] = useState<string>('');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -16,39 +17,16 @@ const BookList: React.FC = () => {
 
   useEffect(() => {
     loadBooks();
-  }, [searchTerm, selectedReadStatus]);
+  }, [searchQuery, selectedReadStatus]);
 
   const loadBooks = async () => {
     try {
       setLoading(true);
       console.log('Making request to books API...');
-      const response = await fetch(`http://localhost:8080/api/books${buildQueryString()}`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-      
-      if (response.status === 401) {
-        console.log('Unauthorized, redirecting to login');
-        window.location.href = '/login';
-        return;
-      }
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Books data received:', data);
-        setBooks(data);
-        setError('');
-      } else {
-        console.log('Response not ok, status:', response.status);
-        const errorText = await response.text();
-        console.log('Error response:', errorText);
-        throw new Error(`Failed to fetch books: ${response.status} - ${errorText}`);
-      }
+      const data = await bookApi.getAllBooks(searchQuery, selectedReadStatus);
+      console.log('Books data received:', data);
+      setBooks(data);
+      setError('');
     } catch (err) {
       console.error('Error in loadBooks:', err);
       setError('書籍の読み込みに失敗しました');
@@ -57,12 +35,15 @@ const BookList: React.FC = () => {
     }
   };
 
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-    if (searchTerm) params.append('search', searchTerm);
-    if (selectedReadStatus) params.append('readStatus', selectedReadStatus);
-    const queryString = params.toString();
-    return queryString ? `?${queryString}` : '';
+
+  const handleSearch = () => {
+    setSearchQuery(searchTerm);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -120,8 +101,15 @@ const BookList: React.FC = () => {
             placeholder="タイトル、出版社、著者で検索..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={handleKeyPress}
             className="search-input"
           />
+          <button
+            onClick={handleSearch}
+            className="search-button"
+          >
+            検索
+          </button>
         </div>
         
         <div className="status-filter">
@@ -141,7 +129,7 @@ const BookList: React.FC = () => {
       <div className="books-grid">
         {books.length === 0 ? (
           <div className="no-books">
-            {searchTerm || selectedReadStatus ? '検索条件に一致する書籍が見つかりませんでした' : 'まだ書籍がありません'}
+            {searchQuery || selectedReadStatus ? '検索条件に一致する書籍が見つかりませんでした' : 'まだ書籍がありません'}
           </div>
         ) : (
           books.map((book) => (

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { sanitizeInput, containsMaliciousPattern } from '../utils/sanitization';
 import './Login.css';
 
 interface LoginData {
@@ -19,8 +21,15 @@ const Login: React.FC = () => {
     password: ''
   });
   const [errors, setErrors] = useState<ValidationErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+
+  // 既にログイン済みの場合はリダイレクト
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
@@ -37,11 +46,25 @@ const Login: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const sanitizeLoginInput = (input: string): string => {
+    const sanitized = sanitizeInput(input, 100);
+    
+    // 悪意のあるパターンをチェック
+    if (containsMaliciousPattern(input)) {
+      console.warn('Malicious pattern detected in input');
+      return '';
+    }
+    
+    return sanitized;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    const sanitizedValue = sanitizeLoginInput(value);
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: sanitizedValue
     }));
     
     if (errors[name as keyof ValidationErrors]) {
@@ -59,38 +82,26 @@ const Login: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
     setErrors({});
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // セッション情報を保存
-        sessionStorage.setItem('user', JSON.stringify({
-          username: data.username,
-          email: data.email,
-          role: data.role
-        }));
-        
-        alert('ログインしました！');
-        navigate('/');
-      } else {
-        setErrors({ general: data.error || 'ログインに失敗しました' });
+      await login(formData.username, formData.password);
+      navigate('/');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      let errorMessage = 'ログインに失敗しました';
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'ユーザー名またはパスワードが間違っています';
+      } else if (error.response?.status === 429) {
+        errorMessage = 'ログイン試行回数が上限に達しました。しばらく待ってからお試しください';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'サーバーエラーが発生しました。しばらく待ってからお試しください';
+      } else if (error.message === 'Network Error') {
+        errorMessage = 'ネットワークエラーが発生しました。インターネット接続を確認してください';
       }
-    } catch (error) {
-      setErrors({ general: 'ネットワークエラーが発生しました' });
-    } finally {
-      setIsLoading(false);
+      
+      setErrors({ general: errorMessage });
     }
   };
 
@@ -129,17 +140,17 @@ const Login: React.FC = () => {
           </div>
 
           {errors.general && (
-            <div className="error-message general-error">
-              {errors.general}
+            <div className="error-message general-error" role="alert">
+              <span>⚠️</span> {errors.general}
             </div>
           )}
 
           <button
             type="submit"
             className="login-button"
-            disabled={isLoading}
+            disabled={loading}
           >
-            {isLoading ? 'ログイン中...' : 'ログイン'}
+            {loading ? 'ログイン中...' : 'ログイン'}
           </button>
 
           <div className="register-link">

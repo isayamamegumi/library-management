@@ -8,6 +8,8 @@ import com.library.management.repository.BookRepository;
 import com.library.management.repository.AuthorRepository;
 import com.library.management.repository.BookAuthorRepository;
 import com.library.management.repository.UserRepository;
+import com.library.management.exception.BookNotFoundException;
+import com.library.management.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -36,8 +39,8 @@ public class BookService {
     public List<Book> getAllBooks() {
         try {
             System.out.println("=== BookService.getAllBooks called ===");
-            List<Book> books = bookRepository.findAll();  // 一時的に単純なfindAll()を使用
-            System.out.println("BookRepository.findAll() returned: " + books.size() + " books");
+            List<Book> books = bookRepository.findAllWithAuthors();
+            System.out.println("BookRepository.findAllWithAuthors() returned: " + books.size() + " books");
             return books;
         } catch (Exception e) {
             System.out.println("=== ERROR in BookService.getAllBooks ===");
@@ -50,7 +53,7 @@ public class BookService {
         try {
             System.out.println("=== BookService.getAllBooksByUser called for user: " + username + " ===");
             User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
             
             List<Book> books = bookRepository.findByUserIdWithAuthors(currentUser.getId());
             System.out.println("Found " + books.size() + " books for user: " + username);
@@ -75,7 +78,7 @@ public class BookService {
     
     public List<Book> searchBooksByUser(String keyword, String username) {
         User currentUser = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found: " + username));
+            .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
             
         if (keyword == null || keyword.trim().isEmpty()) {
             return getAllBooksByUser(username);
@@ -84,12 +87,16 @@ public class BookService {
     }
     
     public List<Book> getBooksByReadStatus(String readStatus) {
-        return bookRepository.findByReadStatus(readStatus);
+        List<Book> books = bookRepository.findByReadStatus(readStatus);
+        // 著者情報を含む完全な情報を取得するために再取得
+        return books.stream()
+            .map(book -> bookRepository.findByIdWithAuthors(book.getId()).orElse(book))
+            .collect(Collectors.toList());
     }
     
     public List<Book> getBooksByReadStatusAndUser(String readStatus, String username) {
         User currentUser = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found: " + username));
+            .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
             
         return bookRepository.findByUserIdAndReadStatus(currentUser.getId(), readStatus);
     }
@@ -128,7 +135,7 @@ public class BookService {
             
             return saveBook(book, authorNames);
         }
-        throw new RuntimeException("Book not found with id: " + id);
+        throw new BookNotFoundException("Book not found with id: " + id);
     }
     
     public void deleteBook(Long id) {
@@ -136,7 +143,7 @@ public class BookService {
             bookAuthorRepository.deleteByBookId(id);
             bookRepository.deleteById(id);
         } else {
-            throw new RuntimeException("Book not found with id: " + id);
+            throw new BookNotFoundException("Book not found with id: " + id);
         }
     }
     
@@ -145,18 +152,27 @@ public class BookService {
     }
     
     public boolean isOwner(Long bookId, String username) {
-        Book book = bookRepository.findById(bookId)
-            .orElseThrow(() -> new RuntimeException("Book not found with id: " + bookId));
-        
-        User currentUser = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found: " + username));
-        
-        return book.getUserId().equals(currentUser.getId());
+        try {
+            Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new BookNotFoundException("Book not found with id: " + bookId));
+            
+            User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
+            
+            if (book.getUserId() == null) {
+                return false;
+            }
+            
+            return book.getUserId().equals(currentUser.getId());
+        } catch (Exception e) {
+            System.out.println("Error in isOwner check: " + e.getMessage());
+            return false;
+        }
     }
     
     public Book createBook(Book book, String username) {
         User currentUser = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found: " + username));
+            .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
         
         book.setUserId(currentUser.getId());
         return bookRepository.save(book);
@@ -164,7 +180,7 @@ public class BookService {
     
     public Book createBookWithAuthors(Book book, List<String> authorNames, String username) {
         User currentUser = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found: " + username));
+            .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
         
         book.setUserId(currentUser.getId());
         return saveBook(book, authorNames);
