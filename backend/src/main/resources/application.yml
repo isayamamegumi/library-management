@@ -39,3 +39,9 @@ logging:
   level:
     org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
+
+# JWT設定
+app:
+  jwtSecret: mySecretKeyForLibraryManagementSystem2024!@#$%^&*()_EXTENDED_FOR_HS512_ALGORITHM_MINIMUM_LENGTH_REQUIREMENT
+  jwtExpirationMs: 3600000    # 1時間 (60 * 60 * 1000)
+  jwtRefreshExpirationMs: 604800000  # 7日間 (7 * 24 * 60 * 60 * 1000)

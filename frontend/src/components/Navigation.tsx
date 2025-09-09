@@ -1,38 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import './Navigation.css';
 
-interface User {
-  username: string;
-  email: string;
-  role: string;
-}
-
 const Navigation: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const userData = sessionStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, [location]);
-
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:8080/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
+      await logout();
+      navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
+      // ログアウト処理が失敗してもログイン画面にリダイレクト
+      navigate('/login');
     }
-    
-    sessionStorage.removeItem('user');
-    setUser(null);
-    navigate('/login');
   };
 
   // ログイン・登録画面では表示しない
@@ -50,7 +34,7 @@ const Navigation: React.FC = () => {
         </div>
 
         <div className="nav-menu">
-          {user ? (
+          {isAuthenticated && user ? (
             <>
               <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
                 書籍一覧

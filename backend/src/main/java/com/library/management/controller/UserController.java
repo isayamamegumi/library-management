@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,28 +28,15 @@ public class UserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-        
-        if (!currentUser.getRole().getName().equals("admin")) {
-            return ResponseEntity.status(403).build();
-        }
-        
         return ResponseEntity.ok(userRepository.findAll());
     }
 
+    @PreAuthorize("#id == authentication.principal.id or hasRole('ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-        
-        if (!currentUser.getId().equals(id) && !currentUser.getRole().getName().equals("admin")) {
-            return ResponseEntity.status(403)
-                .body(Map.of("error", "Access denied"));
-        }
-        
         Optional<User> user = userRepository.findById(id);
         if (user.isPresent()) {
             User userData = user.get();
@@ -64,6 +52,7 @@ public class UserController {
         return ResponseEntity.notFound().build();
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -79,15 +68,9 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("#id == authentication.principal.id or hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-        
-        if (!currentUser.getId().equals(id) && !currentUser.getRole().getName().equals("admin")) {
-            return ResponseEntity.status(403)
-                .body(Map.of("error", "Access denied"));
-        }
         
         Optional<User> optionalUser = userRepository.findById(id);
         if (!optionalUser.isPresent()) {
@@ -120,15 +103,11 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) auth.getPrincipal();
-        
-        if (!currentUser.getRole().getName().equals("admin")) {
-            return ResponseEntity.status(403)
-                .body(Map.of("error", "Access denied"));
-        }
         
         if (currentUser.getId().equals(id)) {
             return ResponseEntity.badRequest()
