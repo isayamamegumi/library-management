@@ -23,6 +23,8 @@ public class BookRequest {
     @Size(max = 50, message = "Read status must be less than 50 characters")
     private String readStatus;
     
+    private Long genreId;
+    
     private List<String> authorNames;
     
     public BookRequest() {}
@@ -76,6 +78,14 @@ public class BookRequest {
     
     public void setReadStatus(String readStatus) {
         this.readStatus = readStatus;
+    }
+    
+    public Long getGenreId() {
+        return genreId;
+    }
+    
+    public void setGenreId(Long genreId) {
+        this.genreId = genreId;
     }
     
     public List<String> getAuthorNames() {

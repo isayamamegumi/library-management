@@ -1,6 +1,7 @@
 package com.library.management.repository;
 
 import com.library.management.entity.Book;
+import com.library.management.entity.ReadStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,7 +19,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     
     Optional<Book> findByIsbn(String isbn);
     
-    List<Book> findByReadStatus(String readStatus);
+    List<Book> findByReadStatus(ReadStatus readStatus);
     
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.bookAuthors ba LEFT JOIN FETCH ba.author")
     List<Book> findAllWithAuthors();
@@ -34,7 +35,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     
     List<Book> findByUserId(Long userId);
     
-    List<Book> findByUserIdAndReadStatus(Long userId, String readStatus);
+    List<Book> findByUserIdAndReadStatus(Long userId, ReadStatus readStatus);
     
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.bookAuthors ba LEFT JOIN FETCH ba.author a " +
            "WHERE b.userId = :userId AND (" +

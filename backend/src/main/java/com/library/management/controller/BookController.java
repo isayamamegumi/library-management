@@ -3,7 +3,11 @@ package com.library.management.controller;
 import com.library.management.dto.BookRequest;
 import com.library.management.entity.Book;
 import com.library.management.entity.User;
+import com.library.management.entity.ReadStatus;
+import com.library.management.entity.Genre;
 import com.library.management.service.BookService;
+import com.library.management.service.ReadStatusService;
+import com.library.management.service.GenreService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,6 +27,12 @@ public class BookController {
     
     @Autowired
     private BookService bookService;
+    
+    @Autowired
+    private ReadStatusService readStatusService;
+    
+    @Autowired
+    private GenreService genreService;
     
     @PreAuthorize("isAuthenticated()")
     @GetMapping
@@ -67,15 +77,16 @@ public class BookController {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = auth.getName();
             
+            ReadStatus readStatus = getReadStatusByName(bookRequest.getReadStatus());
             Book book = new Book(
                 bookRequest.getTitle(),
                 bookRequest.getPublisher(),
                 bookRequest.getPublishedDate(),
                 bookRequest.getIsbn(),
-                bookRequest.getReadStatus()
+                readStatus
             );
             
-            Book savedBook = bookService.createBookWithAuthors(book, bookRequest.getAuthorNames(), username);
+            Book savedBook = bookService.createBookWithAuthorsAndGenre(book, bookRequest.getAuthorNames(), username, bookRequest.getGenreId());
             return ResponseEntity.status(HttpStatus.CREATED).body(savedBook);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -87,15 +98,16 @@ public class BookController {
     public ResponseEntity<Book> updateBook(@PathVariable Long id, 
                                           @Valid @RequestBody BookRequest bookRequest) {
         try {
+            ReadStatus readStatus = getReadStatusByName(bookRequest.getReadStatus());
             Book book = new Book(
                 bookRequest.getTitle(),
                 bookRequest.getPublisher(),
                 bookRequest.getPublishedDate(),
                 bookRequest.getIsbn(),
-                bookRequest.getReadStatus()
+                readStatus
             );
             
-            Book updatedBook = bookService.updateBook(id, book, bookRequest.getAuthorNames());
+            Book updatedBook = bookService.updateBookWithGenre(id, book, bookRequest.getAuthorNames(), bookRequest.getGenreId());
             return ResponseEntity.ok(updatedBook);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -127,5 +139,13 @@ public class BookController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+    
+    private ReadStatus getReadStatusByName(String readStatusName) {
+        if (readStatusName == null || readStatusName.trim().isEmpty()) {
+            return readStatusService.getDefaultReadStatus();
+        }
+        return readStatusService.getReadStatusByName(readStatusName.trim())
+            .orElse(readStatusService.getDefaultReadStatus());
     }
 }

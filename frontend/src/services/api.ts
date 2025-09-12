@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { Book, BookRequest, Author } from '../types/Book';
+import { Book, BookRequest, Author, ReadStatus, Genre } from '../types/Book';
 import AuthService from './auth';
 
 const API_BASE_URL = 'http://localhost:8080/api';
@@ -155,6 +155,50 @@ export const authorApi = {
 
   deleteAuthor: async (id: number): Promise<void> => {
     await api.delete(`/authors/${id}`);
+  },
+};
+
+export const readStatusApi = {
+  getAllReadStatuses: async (): Promise<ReadStatus[]> => {
+    const response = await api.get('/read-statuses');
+    return response.data;
+  },
+
+  getReadStatusById: async (id: number): Promise<ReadStatus> => {
+    const response = await api.get(`/read-statuses/${id}`);
+    return response.data;
+  },
+};
+
+export const genreApi = {
+  getAllGenres: async (): Promise<Genre[]> => {
+    const response = await api.get('/genres');
+    return response.data;
+  },
+
+  getGenreById: async (id: number): Promise<Genre> => {
+    const response = await api.get(`/genres/${id}`);
+    return response.data;
+  },
+
+  createGenre: async (genre: Omit<Genre, 'id'>): Promise<Genre> => {
+    const response = await api.post('/genres', genre);
+    return response.data;
+  },
+
+  updateGenre: async (id: number, genre: Omit<Genre, 'id'>): Promise<Genre> => {
+    const response = await api.put(`/genres/${id}`, genre);
+    return response.data;
+  },
+
+  deleteGenre: async (id: number): Promise<void> => {
+    await api.delete(`/genres/${id}`);
+  },
+
+  searchGenres: async (search?: string): Promise<Genre[]> => {
+    const params = search ? `?search=${search}` : '';
+    const response = await api.get(`/genres/search${params}`);
+    return response.data;
   },
 };
 

@@ -14,6 +14,15 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
   
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+  
+  batch:
+    job:
+      enabled: false
+  
   web:
     cors:
       allowed-origins: 

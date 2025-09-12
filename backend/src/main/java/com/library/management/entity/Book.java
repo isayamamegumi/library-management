@@ -33,9 +33,9 @@ public class Book {
     @Column(unique = true)
     private String isbn;
     
-    @Size(max = 50, message = "Read status must be less than 50 characters")
-    @Column(name = "read_status")
-    private String readStatus;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "read_status_id")
+    private ReadStatus readStatus;
     
     @Column(name = "user_id")
     private Long userId;
@@ -47,6 +47,10 @@ public class Book {
     @JsonManagedReference
     private List<BookAuthor> bookAuthors = new ArrayList<>();
     
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "genre_id")
+    private Genre genre;
+    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -54,7 +58,7 @@ public class Book {
     
     public Book() {}
     
-    public Book(String title, String publisher, LocalDate publishedDate, String isbn, String readStatus) {
+    public Book(String title, String publisher, LocalDate publishedDate, String isbn, ReadStatus readStatus) {
         this.title = title;
         this.publisher = publisher;
         this.publishedDate = publishedDate;
@@ -103,11 +107,11 @@ public class Book {
         this.isbn = isbn;
     }
     
-    public String getReadStatus() {
+    public ReadStatus getReadStatus() {
         return readStatus;
     }
     
-    public void setReadStatus(String readStatus) {
+    public void setReadStatus(ReadStatus readStatus) {
         this.readStatus = readStatus;
     }
     
@@ -133,5 +137,13 @@ public class Book {
     
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+    
+    public Genre getGenre() {
+        return genre;
+    }
+    
+    public void setGenre(Genre genre) {
+        this.genre = genre;
     }
 }

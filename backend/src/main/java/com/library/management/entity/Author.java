@@ -3,7 +3,7 @@ package com.library.management.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,7 +26,7 @@ public class Author {
     private LocalDateTime createdAt;
     
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference
+    @JsonBackReference
     private List<BookAuthor> bookAuthors = new ArrayList<>();
     
     @PrePersist

@@ -5,13 +5,15 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 
 @Entity
 @Table(name = "users")
-public class User implements UserDetails {
+public class User implements UserDetails, Serializable {
+    private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
