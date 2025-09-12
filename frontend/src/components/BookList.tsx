@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Book, ReadStatus, ReadStatusType } from '../types/Book';
+import { Book, ReadStatusNames } from '../types/Book';
 import { bookApi } from '../services/api';
 import BookForm from './BookForm';
 import './BookList.css';
@@ -11,7 +11,6 @@ const BookList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedReadStatus, setSelectedReadStatus] = useState<string>('');
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
 
@@ -119,7 +118,7 @@ const BookList: React.FC = () => {
             className="status-select"
           >
             <option value="">すべてのステータス</option>
-            {Object.entries(ReadStatus).map(([key, value]) => (
+            {Object.entries(ReadStatusNames).map(([key, value]) => (
               <option key={key} value={value}>{value}</option>
             ))}
           </select>
@@ -157,11 +156,12 @@ const BookList: React.FC = () => {
                 {book.publisher && <p><strong>出版社:</strong> {book.publisher}</p>}
                 {book.publishedDate && <p><strong>出版日:</strong> {formatDate(book.publishedDate)}</p>}
                 {book.isbn && <p><strong>ISBN:</strong> {book.isbn}</p>}
+                {book.genre && <p><strong>ジャンル:</strong> {book.genre.name}</p>}
                 {book.readStatus && (
                   <p>
                     <strong>読書状況:</strong>
-                    <span className={`status status-${book.readStatus}`}>
-                      {book.readStatus}
+                    <span className={`status status-${book.readStatus.name}`}>
+                      {book.readStatus.name}
                     </span>
                   </p>
                 )}

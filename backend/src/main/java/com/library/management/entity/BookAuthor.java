@@ -2,7 +2,7 @@ package com.library.management.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(name = "book_authors")
@@ -24,7 +24,7 @@ public class BookAuthor {
     
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "author_id", insertable = false, updatable = false)
-    @JsonIgnoreProperties("bookAuthors")
+    @JsonManagedReference
     private Author author;
     
     public BookAuthor() {}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Book, BookRequest, ReadStatus } from '../types/Book';
-import { bookApi } from '../services/api';
+import { Book, BookRequest, ReadStatusNames, Genre } from '../types/Book';
+import { bookApi, genreApi } from '../services/api';
 import './BookForm.css';
 
 interface BookFormProps {
@@ -15,19 +15,33 @@ const BookForm: React.FC<BookFormProps> = ({ book, onClose }) => {
     publishedDate: '',
     isbn: '',
     readStatus: '',
+    genreId: undefined,
     authorNames: ['']
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [genres, setGenres] = useState<Genre[]>([]);
 
   useEffect(() => {
+    // ジャンル一覧を取得
+    const fetchGenres = async () => {
+      try {
+        const genreData = await genreApi.getAllGenres();
+        setGenres(genreData);
+      } catch (err) {
+        console.error('Failed to fetch genres:', err);
+      }
+    };
+    fetchGenres();
+
     if (book) {
       setFormData({
         title: book.title,
         publisher: book.publisher || '',
         publishedDate: book.publishedDate || '',
         isbn: book.isbn || '',
-        readStatus: book.readStatus || '',
+        readStatus: book.readStatus?.name || '',
+        genreId: book.genre?.id,
         authorNames: (() => {
           const names = book.bookAuthors?.map(ba => ba.author?.name).filter(name => name) || [];
           return names.length > 0 ? names : [''];
@@ -40,7 +54,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, onClose }) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === 'genreId' ? (value ? Number(value) : undefined) : value
     }));
   };
 
@@ -193,8 +207,24 @@ const BookForm: React.FC<BookFormProps> = ({ book, onClose }) => {
               className="form-select"
             >
               <option value="">選択してください</option>
-              {Object.entries(ReadStatus).map(([key, value]) => (
+              {Object.entries(ReadStatusNames).map(([key, value]) => (
                 <option key={key} value={value}>{value}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="genreId">ジャンル</label>
+            <select
+              id="genreId"
+              name="genreId"
+              value={formData.genreId || ''}
+              onChange={handleInputChange}
+              className="form-select"
+            >
+              <option value="">選択してください</option>
+              {genres.map((genre) => (
+                <option key={genre.id} value={genre.id}>{genre.name}</option>
               ))}
             </select>
           </div>

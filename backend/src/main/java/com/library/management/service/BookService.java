@@ -4,10 +4,13 @@ import com.library.management.entity.Book;
 import com.library.management.entity.Author;
 import com.library.management.entity.BookAuthor;
 import com.library.management.entity.User;
+import com.library.management.entity.ReadStatus;
+import com.library.management.entity.Genre;
 import com.library.management.repository.BookRepository;
 import com.library.management.repository.AuthorRepository;
 import com.library.management.repository.BookAuthorRepository;
 import com.library.management.repository.UserRepository;
+import com.library.management.repository.ReadStatusRepository;
 import com.library.management.exception.BookNotFoundException;
 import com.library.management.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +38,12 @@ public class BookService {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private ReadStatusRepository readStatusRepository;
+    
+    @Autowired
+    private GenreService genreService;
     
     public List<Book> getAllBooks() {
         try {
@@ -86,7 +95,10 @@ public class BookService {
         return bookRepository.searchBooksByUser(currentUser.getId(), keyword.trim());
     }
     
-    public List<Book> getBooksByReadStatus(String readStatus) {
+    public List<Book> getBooksByReadStatus(String readStatusName) {
+        ReadStatus readStatus = readStatusRepository.findByName(readStatusName)
+            .orElseThrow(() -> new RuntimeException("Read status not found: " + readStatusName));
+        
         List<Book> books = bookRepository.findByReadStatus(readStatus);
         // 著者情報を含む完全な情報を取得するために再取得
         return books.stream()
@@ -94,14 +106,28 @@ public class BookService {
             .collect(Collectors.toList());
     }
     
-    public List<Book> getBooksByReadStatusAndUser(String readStatus, String username) {
+    public List<Book> getBooksByReadStatusAndUser(String readStatusName, String username) {
         User currentUser = userRepository.findByUsername(username)
             .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
+        
+        ReadStatus readStatus = readStatusRepository.findByName(readStatusName)
+            .orElseThrow(() -> new RuntimeException("Read status not found: " + readStatusName));
             
         return bookRepository.findByUserIdAndReadStatus(currentUser.getId(), readStatus);
     }
     
     public Book saveBook(Book book, List<String> authorNames) {
+        return saveBookWithGenre(book, authorNames, null);
+    }
+    
+    public Book saveBookWithGenre(Book book, List<String> authorNames, Long genreId) {
+        // ジャンルが指定されている場合は設定
+        if (genreId != null) {
+            Genre genre = genreService.getGenreById(genreId)
+                    .orElseThrow(() -> new RuntimeException("Genre not found with id: " + genreId));
+            book.setGenre(genre);
+        }
+        
         Book savedBook = bookRepository.save(book);
         
         if (authorNames != null && !authorNames.isEmpty()) {
@@ -124,6 +150,10 @@ public class BookService {
     }
     
     public Book updateBook(Long id, Book bookDetails, List<String> authorNames) {
+        return updateBookWithGenre(id, bookDetails, authorNames, null);
+    }
+    
+    public Book updateBookWithGenre(Long id, Book bookDetails, List<String> authorNames, Long genreId) {
         Optional<Book> optionalBook = bookRepository.findById(id);
         if (optionalBook.isPresent()) {
             Book book = optionalBook.get();
@@ -133,7 +163,7 @@ public class BookService {
             book.setIsbn(bookDetails.getIsbn());
             book.setReadStatus(bookDetails.getReadStatus());
             
-            return saveBook(book, authorNames);
+            return saveBookWithGenre(book, authorNames, genreId);
         }
         throw new BookNotFoundException("Book not found with id: " + id);
     }
@@ -179,10 +209,14 @@ public class BookService {
     }
     
     public Book createBookWithAuthors(Book book, List<String> authorNames, String username) {
+        return createBookWithAuthorsAndGenre(book, authorNames, username, null);
+    }
+    
+    public Book createBookWithAuthorsAndGenre(Book book, List<String> authorNames, String username, Long genreId) {
         User currentUser = userRepository.findByUsername(username)
             .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
         
         book.setUserId(currentUser.getId());
-        return saveBook(book, authorNames);
+        return saveBookWithGenre(book, authorNames, genreId);
     }
 }
