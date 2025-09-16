@@ -28,12 +28,12 @@ public class BookBatchJobConfig {
     private BookItemWriter bookItemWriter;
     
     @Autowired
-    private BatchNotificationService batchNotificationService;
+    private BatchJobExecutionListener batchJobExecutionListener;
     
     @Bean
     public Job bookProcessingJob(JobRepository jobRepository, Step bookProcessingStep) {
         return new JobBuilder("bookProcessingJob", jobRepository)
-                .listener(batchNotificationService)
+                .listener(batchJobExecutionListener)
                 .start(bookProcessingStep)
                 .build();
     }

@@ -5,6 +5,7 @@ import BookList from './components/BookList';
 import Login from './components/Login';
 import UserRegistration from './components/UserRegistration';
 import UserProfile from './components/UserProfile';
+import BatchManagement from './components/BatchManagement';
 import Navigation from './components/Navigation';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage401 from './components/ErrorPage401';
@@ -24,12 +25,30 @@ const LoadingSpinner: React.FC = () => (
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
-  
+
   if (loading) {
     return <LoadingSpinner />;
   }
-  
+
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+};
+
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (user?.role !== 'admin') {
+    return <Navigate to="/error/403" />;
+  }
+
+  return <>{children}</>;
 };
 
 const AppContent: React.FC = () => {
@@ -63,6 +82,14 @@ const AppContent: React.FC = () => {
                 <ProtectedRoute>
                   <UserProfile />
                 </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/batch"
+              element={
+                <AdminRoute>
+                  <BatchManagement />
+                </AdminRoute>
               }
             />
             <Route path="*" element={<Navigate to="/" />} />

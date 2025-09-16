@@ -8,9 +8,9 @@ import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.stereotype.Service;
 
 @Service
-public class BatchNotificationService implements JobExecutionListener {
-    
-    private static final Logger logger = LoggerFactory.getLogger(BatchNotificationService.class);
+public class BatchJobExecutionListener implements JobExecutionListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(BatchJobExecutionListener.class);
     
     @Override
     public void beforeJob(JobExecution jobExecution) {

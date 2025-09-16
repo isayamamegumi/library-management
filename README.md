@@ -1,8 +1,8 @@
 # 蔵書管理システム
 
-Java Spring Boot + React TypeScriptで構築された個人向け蔵書管理アプリケーションです。JWT認証とセッション認証のハイブリッド方式を使用したセキュアなシステムで、ユーザーごとに書籍を管理できます。
+Java Spring Boot + React TypeScriptで構築された高機能な個人向け蔵書管理アプリケーションです。最新のアーキテクチャとセキュリティ機能を備えた、エンタープライズレベルのシステムです。
 
-## 機能
+## 🌟 主要機能
 
 ### 📚 書籍管理
 - 書籍の追加・編集・削除・検索
@@ -10,6 +10,7 @@ Java Spring Boot + React TypeScriptで構築された個人向け蔵書管理ア
 - 読書状況の管理（未読、読書中、読了、中断中）
 - ISBN、出版社、出版日などの詳細情報管理
 - ユーザーごとの書籍所有権管理
+- **高速検索・フィルタリング機能**
 
 ### 🔐 認証・セキュリティ
 - **JWT + セッション ハイブリッド認証**（Spring Security）
@@ -20,15 +21,25 @@ Java Spring Boot + React TypeScriptで構築された個人向け蔵書管理ア
 - セキュアなパスワード暗号化（BCrypt）
 - **ProtectedRoute コンポーネント**による認証ガード
 
+### ⚡ バッチ処理システム
+- **統合バッチ管理サービス**による一元化
+- **複合統計ジョブ**: ユーザー・ジャンル・読書ペース分析
+- **並列パーティション処理**: 大量データの効率的処理
+- **バッチチェーンフロー**: 条件分岐を含む連続処理
+- **リアルタイム監視**: 実行中ジョブの進捗追跡
+- **エラー回復機能**: 失敗ジョブの自動復旧
+- **スケジュール管理**: Cron式による定期実行
+- **通知システム**: 実行結果の自動通知
+
 ### 🛡️ セキュリティ機能
 - **強化されたCORS設定** (withCredentials対応)
 - **CSRFプロテクション** (準備済み)
 - セキュリティヘッダー設定
 - アクセス制御（自分の書籍のみ編集・削除可能）
 - **入力値サニタイゼーション** (XSS/SQLインジェクション対策)
-- セキュリティ監査ログ
+- **グローバル例外ハンドリング**
+- **セキュリティ監査ログ**
 - **自動ログアウト機能** (トークン期限切れ時)
-- **悪意のあるパターン検出**
 
 ### 🎨 UI/UX改善
 - **モダンなグラスモーフィズムデザイン**
@@ -38,107 +49,87 @@ Java Spring Boot + React TypeScriptで構築された個人向け蔵書管理ア
 - **詳細なエラーメッセージ表示**
 - **ローディング状態表示**
 - **エラーバウンダリ**による例外処理
+- **再利用可能UIコンポーネント**（Modal、LoadingSpinner等）
 
-## 技術スタック
+## 🏗️ 技術スタック
 
 ### バックエンド
-- Java 17
-- Spring Boot 3.1.0
-- Spring Data JPA
+- **Java 17**
+- **Spring Boot 3.1.0**
+- **Spring Batch 5** (バッチ処理)
+- **Spring Data JPA**
 - **Spring Security** (JWT + Session)
-- **JWT (Access & Refresh Token)**
-- **セキュリティ監査システム**
-- PostgreSQL
-- Maven
+- **Jakarta Validation** (Bean Validation)
+- **PostgreSQL**
+- **Flyway** (データベースマイグレーション)
+- **Quartz Scheduler**
+- **Maven**
 - **Logback** (構造化ログ)
 
 ### フロントエンド
-- React 18
-- TypeScript
+- **React 18**
+- **TypeScript**
 - **React Context API** (状態管理)
 - **React Router v6** (ProtectedRoute)
-- Axios (認証インターセプター対応)
+- **Custom Hooks** (再利用可能ロジック)
+- **Axios** (認証インターセプター対応)
 - **CSS3** (モダンUI, レスポンシブ)
 - **エラーハンドリング** (ErrorBoundary)
-- **入力値サニタイゼーション**
+- **型安全なサービス層**
 
-## セットアップ手順
+### アーキテクチャ改善
+- **抽象基底クラス**: 共通処理の標準化
+- **統合管理サービス**: ビジネスロジックの一元化
+- **レポジトリパターン**: データアクセス層の最適化
+- **サービス層分離**: フロントエンドAPI呼び出しの整理
+- **型安全性**: TypeScript + Jakarta Validation
+
+## 🚀 セットアップ手順
 
 ### 前提条件
-- Java 17以上
-- Node.js 16以上
-- PostgreSQL
-- Maven
+- **Java 17以上**
+- **Node.js 16以上**
+- **PostgreSQL 12以上**
+- **Maven 3.6以上**
 
 ### データベース設定
-データベース: `librarymanage`
-以下のテーブルが作成済みであることを確認してください：
 
 ```sql
--- usersテーブル（ユーザー管理）
-CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    username VARCHAR(255) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role_id BIGINT REFERENCES roles(id),
-    created_at TIMESTAMP DEFAULT NOW()
-);
+-- データベース作成
+CREATE DATABASE librarymanage;
 
--- rolesテーブル（権限管理）
-CREATE TABLE roles (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL
-);
-
--- booksテーブル（ユーザー所有権追加）
-CREATE TABLE books (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    publisher VARCHAR(255),
-    published_date DATE,
-    isbn VARCHAR(13) UNIQUE,
-    read_status VARCHAR(50),
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- authorsテーブル
-CREATE TABLE authors (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- book_authorsテーブル（多対多リレーション）
-CREATE TABLE book_authors (
-    book_id BIGINT REFERENCES books(id) ON DELETE CASCADE,
-    author_id BIGINT REFERENCES authors(id) ON DELETE CASCADE,
-    PRIMARY KEY (book_id, author_id)
-);
-
--- 初期データ挿入
-INSERT INTO roles (name) VALUES ('ADMIN'), ('USER');
-
--- インデックス作成（パフォーマンス向上）
-CREATE INDEX idx_books_user_id ON books(user_id);
-CREATE INDEX idx_books_isbn ON books(isbn);
-CREATE INDEX idx_users_username ON users(username);
+-- 以下のテーブルがFlywayにより自動作成されます
+-- - users (ユーザー管理)
+-- - roles (権限管理)
+-- - books (書籍管理)
+-- - authors (著者管理)
+-- - book_authors (書籍-著者関連)
+-- - genres (ジャンル管理)
+-- - read_statuses (読書状況管理)
+-- - batch_execution_logs (バッチ実行ログ)
+-- - batch_statistics (統計データ)
+-- - system_logs (システムログ)
 ```
 
 ### バックエンドの起動
 
-1. バックエンドディレクトリに移動
+1. **設定ファイル更新**
+```yaml
+# backend/src/main/resources/application.yml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/librarymanage
+    username: postgres
+    password: your-password
+```
+
+2. **依存関係のインストールとビルド**
 ```bash
 cd backend
+mvn clean compile
 ```
 
-2. Mavenで依存関係をインストール
-```bash
-mvn clean install
-```
-
-3. アプリケーションを起動
+3. **アプリケーション起動**
 ```bash
 mvn spring-boot:run
 ```
@@ -147,24 +138,24 @@ mvn spring-boot:run
 
 ### フロントエンドの起動
 
-1. フロントエンドディレクトリに移動
+1. **フロントエンドディレクトリに移動**
 ```bash
 cd frontend
 ```
 
-2. 依存関係をインストール
+2. **依存関係をインストール**
 ```bash
 npm install
 ```
 
-3. 開発サーバーを起動
+3. **開発サーバーを起動**
 ```bash
 npm start
 ```
 
 フロントエンドは http://localhost:3000 で起動します。
 
-## API エンドポイント
+## 📡 API エンドポイント
 
 ### 🔐 認証 API
 - `POST /api/auth/login` - ログイン（JWT + セッション作成）
@@ -172,28 +163,31 @@ npm start
 - `POST /api/auth/logout` - ログアウト（JWT + セッション削除）
 - `POST /api/auth/refresh` - **アクセストークン更新**
 
-### 📚 Books API（認証必須）
-- `GET /api/books` - 自分の書籍取得（検索・フィルタリング対応）
+### 📚 書籍管理 API（認証必須）
+- `GET /api/books` - 書籍一覧取得（検索・フィルタリング対応）
 - `GET /api/books/{id}` - 書籍詳細取得
 - `POST /api/books` - 新規書籍追加
 - `PUT /api/books/{id}` - 書籍更新（所有者のみ）
 - `DELETE /api/books/{id}` - 書籍削除（所有者のみ）
 - `GET /api/books/isbn/{isbn}` - ISBN検索
 
-### 👥 Users API（認証必須）
+### 👥 ユーザー管理 API（認証必須）
 - `GET /api/users/me` - 自分の情報取得
 - `PUT /api/users/me` - 自分の情報更新
 - `GET /api/users` - ユーザー一覧（管理者のみ）
 - `DELETE /api/users/{id}` - ユーザー削除（管理者のみ）
 
-### Authors API（認証必須）
-- `GET /api/authors` - 全著者取得
-- `GET /api/authors/{id}` - 著者詳細取得
-- `POST /api/authors` - 新規著者追加
-- `PUT /api/authors/{id}` - 著者更新
-- `DELETE /api/authors/{id}` - 著者削除
+### 📊 バッチ管理 API（管理者のみ）
+- `GET /api/batch/statistics` - バッチ統計情報取得
+- `GET /api/batch/running` - 実行中ジョブ一覧
+- `POST /api/batch/jobs/{jobName}/execute` - ジョブ手動実行
+- `POST /api/batch/executions/{id}/stop` - ジョブ停止
+- `GET /api/batch/parameters` - パラメータ管理
+- `GET /api/batch/schedules` - スケジュール管理
+- `GET /api/batch/notifications` - 通知設定
+- `POST /api/batch/recovery/restart/{id}` - 失敗ジョブ再実行
 
-## 使用方法
+## 🎯 使用方法
 
 ### 初回セットアップ
 1. ブラウザで http://localhost:3000 にアクセス
@@ -208,123 +202,129 @@ npm start
 4. 検索欄でタイトル、出版社、著者で検索
 5. ドロップダウンで読書状況によるフィルタリングが可能
 
-### セキュリティ機能
-- **JWT + セッション ハイブリッド認証**
-- **自動トークンリフレッシュ**により継続的な認証
-- **ProtectedRoute**による未認証ユーザーの自動リダイレクト
-- **入力値の自動サニタイゼーション**
-- **悪意のあるパターンの自動検出・ブロック**
-- ログアウト時に全ての認証情報が無効化
-- 他のユーザーの書籍は閲覧可能ですが編集不可
+### バッチ管理（管理者機能）
+1. **バッチ管理画面**にアクセス
+2. **統計情報**でシステム全体の実行状況を確認
+3. **ジョブ手動実行**で各種分析処理を開始
+4. **実行中ジョブ**でリアルタイム進捗を監視
+5. **スケジュール管理**で定期実行を設定
+6. **エラー回復**で失敗したジョブを再実行
 
-### UI/UX 特徴
-- **レスポンシブデザイン** - スマートフォン・タブレット対応
-- **グラスモーフィズム効果** - モダンな半透明デザイン
-- **リアルタイムバリデーション** - 入力エラーの即座表示
-- **詳細なエラーメッセージ** - 具体的な問題内容を表示
-- **ローディング状態表示** - 処理中の視覚的フィードバック
+## 📈 バッチ処理詳細
 
-## 読書状況の種類
+### 利用可能なジョブ
 
-- **未読**: まだ読んでいない
-- **読書中**: 現在読んでいる
-- **読了**: 読み終わった
-- **中断中**: 途中で読むのを止めている
+1. **複合統計ジョブ** (`complexStatsJob`)
+   - ユーザー統計、ジャンル分析、読書ペース分析の統合処理
+   - 推定実行時間: 中程度
 
-## 設定ファイル
+2. **バッチチェーンフロージョブ** (`batchChainFlowJob`)
+   - データ検証→システムヘルスチェック→条件分岐処理→通知
+   - 推定実行時間: 長時間
 
-### セッション設定（application.yml）
-```yaml
-server:
-  servlet:
-    session:
-      timeout: 30m    # セッションタイムアウト30分
-```
+3. **並列パーティションジョブ** (`parallelPartitionedJob`)
+   - ユーザーデータの分割並列処理とデータ変換
+   - 推定実行時間: 中程度
 
-### データベース接続（application.yml）
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/librarymanage
-    username: your-username
-    password: your-password
-```
+### 監視・管理機能
+- **リアルタイム進捗表示**: 実行中ジョブの詳細情報
+- **実行履歴**: 過去のジョブ実行結果と統計
+- **エラー分析**: 失敗原因の詳細解析
+- **パフォーマンス監視**: 実行時間・メモリ使用量の追跡
 
-## セキュリティ機能詳細
+## 🛡️ セキュリティ機能詳細
 
-### 🔐 認証システム
+### 認証システム
 - **ハイブリッド認証**: JWT + セッション認証
 - **自動トークンリフレッシュ**: シームレスな認証継続
 - **パスワード暗号化**: BCrypt（strength=12）
 - **多層防御**: フロントエンド + バックエンド検証
 
-### 🛡️ セキュリティ対策
+### セキュリティ対策
 - **CORS設定**: クロスオリジン対応 + Credentials
 - **入力値サニタイゼーション**: XSS/SQLインジェクション防止
-- **CSRFプロテクション**: トークンベース検証
+- **グローバル例外ハンドリング**: 統一されたエラーレスポンス
 - **セキュリティヘッダー**: XSS、フレーム攻撃対策
 - **アクセス制御**: 所有者ベースの認可
-- **悪意のあるパターン検出**: 自動ブロック機能
+- **バリデーション**: Jakarta Validation による厳密な検証
 
-### 📊 監査・ログ
+### 監査・ログ
 - **セキュリティ監査ログ**: 全認証イベントの記録
 - **構造化ログ**: Logback による詳細ログ
-- **リアルタイム監視**: 不正アクセス検出
+- **バッチ実行ログ**: 処理結果と統計の自動記録
 
-## トラブルシューティング
+## 🔧 トラブルシューティング
 
-### よくある問題
-1. **認証エラー**: 
+### 起動時の問題
+1. **Flywayマイグレーションエラー**:
+   - 自動修復機能が有効
+   - `FlywayRepairRunner`による自動復旧
+2. **データベース接続エラー**:
+   - PostgreSQLサービスの確認
+   - 接続設定の確認
+3. **コンパイルエラー**:
+   - `mvn clean compile` で再ビルド
+
+### 実行時の問題
+1. **認証エラー**:
    - ブラウザのCookieとLocalStorageをクリア
-   - 自動トークンリフレッシュの確認
-   - JWTトークンの有効期限チェック
-2. **CORS エラー**: 
-   - バックエンドのCORS設定を確認
-   - withCredentials設定の確認
-3. **データベース接続エラー**: PostgreSQLが起動しているか確認
-4. **コンパイルエラー**: `mvn clean install` で依存関係を再インストール
-5. **UI表示エラー**: 
-   - ブラウザのキャッシュクリア
-   - React開発サーバーの再起動
+   - JWT自動リフレッシュの確認
+2. **バッチ実行エラー**:
+   - エラー回復機能の使用
+   - ログファイルの確認
+3. **API通信エラー**:
+   - ネットワークタブでリクエスト確認
+   - CORS設定の確認
 
 ### ログ確認
-- **バックエンド**: 
-  - コンソールまたは `backend/logs/application.log`
-  - セキュリティ監査ログ
-- **フロントエンド**: 
-  - ブラウザの開発者ツール
-  - React DevTools (認証状態確認)
-  - Network タブ (API通信確認)
+- **アプリケーションログ**: コンソール出力
+- **バッチ実行ログ**: `batch_execution_logs`テーブル
+- **セキュリティログ**: `system_logs`テーブル
+- **統計データ**: `batch_statistics`テーブル
 
-## 開発者向け情報
+## 👨‍💻 開発者向け情報
 
-### アーキテクチャ
-- **バックエンド**: Spring Boot MVC + Spring Security + JWT + Session
-- **フロントエンド**: React SPA + Context API + Axios Interceptors
-- **データベース**: PostgreSQL with JPA/Hibernate
-- **認証**: **Hybrid Authentication** (JWT + Session)
-- **セキュリティ**: 多層防御 + 監査ログ
+### アーキテクチャ概要
+- **レイヤードアーキテクチャ**: Controller → Service → Repository
+- **抽象基底クラス**: 共通処理の標準化
+- **統合管理サービス**: ビジネスロジックの一元化
+- **型安全設計**: TypeScript + Jakarta Validation
 
 ### 主要コンポーネント
 
 #### バックエンド
-- `SecurityConfig`: Spring Security + JWT設定
-- `JwtAuthenticationFilter`: JWT認証フィルター
-- `AuthController`: 認証エンドポイント (login/logout/refresh)
-- `SecurityLogService`: セキュリティ監査ログサービス
-- `UserDetailsServiceImpl`: ユーザー認証サービス
-- `BookService`: 書籍ビジネスロジック
+- `BatchManagementService`: 統合バッチ管理サービス
+- `AbstractBatchJobConfig`: バッチジョブ基底クラス
+- `AbstractItemProcessor`: アイテム処理基底クラス
+- `AbstractStatisticsWriter`: 統計ライター基底クラス
+- `GlobalExceptionHandler`: グローバル例外ハンドリング
+- `BatchExecutionRepository`: 最適化されたデータアクセス
 
 #### フロントエンド
-- `AuthContext`: React認証状態管理
-- `ProtectedRoute`: 認証ガードコンポーネント
-- `AuthService`: JWT管理・自動リフレッシュ
-- `sanitization.ts`: 入力値サニタイゼーション
-- `ErrorBoundary`: 例外処理コンポーネント
+- `useBatch.ts`: バッチ処理カスタムフック
+- `batchService.ts`: API呼び出しサービス層
+- `Modal.tsx`: 再利用可能モーダルコンポーネント
+- `LoadingSpinner.tsx`: ローディング表示コンポーネント
+- 型安全なインターフェース定義
 
 ### 新機能・改善点
-- **🔄 自動トークンリフレッシュ**: ユーザー体験の向上
-- **🎨 モダンUI**: グラスモーフィズム + レスポンシブ
-- **🛡️ セキュリティ強化**: 入力値サニタイゼーション + 監査ログ  
-- **⚡ パフォーマンス向上**: Context API + 効率的な状態管理
-- **📱 モバイル対応**: 完全レスポンシブデザイン
+- **🔄 統合バッチ管理**: 全バッチ処理の一元化
+- **⚡ パフォーマンス最適化**: データベースアクセスの効率化
+- **🛡️ セキュリティ強化**: グローバル例外ハンドリング
+- **📊 監視・分析**: リアルタイム進捗表示
+- **🔧 保守性向上**: 抽象基底クラスによる標準化
+- **🎨 UI/UX改善**: 再利用可能コンポーネント
+
+### 開発環境
+- **Java 17**: 最新のJava機能を活用
+- **Spring Boot 3.1**: 最新のSpringエコシステム
+- **React 18**: 最新のReact機能
+- **TypeScript**: 完全な型安全性
+
+## 📝 ライセンス
+
+このプロジェクトはMITライセンスの下で公開されています。
+
+---
+
+**蔵書管理システム v2.0** - エンタープライズレベルの機能とセキュリティを備えた最新の蔵書管理アプリケーション
