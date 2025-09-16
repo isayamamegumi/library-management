@@ -36,10 +36,15 @@ const Navigation: React.FC = () => {
         <div className="nav-menu">
           {isAuthenticated && user ? (
             <>
+              {user.role === 'admin' && (
+                <Link to="/admin/batch" className={`nav-link ${location.pathname === '/admin/batch' ? 'active' : ''}`}>
+                  バッチ管理
+                </Link>
+              )}
               <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
                 書籍一覧
               </Link>
-              
+
               <div className="user-menu">
                 <span className="user-greeting">
                   {user.username} さん
