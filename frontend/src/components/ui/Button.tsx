@@ -6,7 +6,7 @@ interface ButtonProps {
   disabled?: boolean;
   className?: string;
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost';
-  size?: 'default' | 'sm' | 'lg';
+  size?: 'default' | 'sm' | 'lg' | 'small';
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -30,6 +30,7 @@ export const Button: React.FC<ButtonProps> = ({
   const sizeClasses = {
     default: 'h-9 px-4 py-2',
     sm: 'h-8 px-3 text-sm',
+    small: 'h-8 px-3 text-sm',
     lg: 'h-10 px-8'
   };
 

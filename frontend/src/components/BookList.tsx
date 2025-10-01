@@ -24,6 +24,23 @@ const BookList: React.FC = () => {
       console.log('Making request to books API...');
       const data = await bookApi.getAllBooks(searchQuery, selectedReadStatus);
       console.log('Books data received:', data);
+
+      // 著者情報の詳細ログ
+      data.forEach((book, index) => {
+        console.log(`Book ${index + 1}: ${book.title}`);
+        console.log('  bookAuthors:', book.bookAuthors);
+        if (book.bookAuthors) {
+          book.bookAuthors.forEach((ba, i) => {
+            console.log(`    BookAuthor ${i}:`, ba);
+            console.log(`      author:`, ba.author);
+            if (ba.author) {
+              console.log(`        name: "${ba.author.name}"`);
+            }
+          });
+        }
+        console.log('  著者表示結果:', getAuthorsDisplay(book));
+      });
+
       setBooks(data);
       setError('');
     } catch (err) {

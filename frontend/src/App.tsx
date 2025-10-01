@@ -6,6 +6,7 @@ import Login from './components/Login';
 import UserRegistration from './components/UserRegistration';
 import UserProfile from './components/UserProfile';
 import BatchManagement from './components/BatchManagement';
+import Reports from './components/Reports';
 import Navigation from './components/Navigation';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage401 from './components/ErrorPage401';
@@ -81,6 +82,14 @@ const AppContent: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <UserProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <Reports />
                 </ProtectedRoute>
               }
             />

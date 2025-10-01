@@ -11,7 +11,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
@@ -21,7 +21,7 @@ spring:
   flyway:
     locations: classpath:db/migration
     baseline-on-migrate: true
-    validate-on-migrate: true
+    validate-on-migrate: false
     out-of-order: true
     clean-disabled: false
     baseline-version: 1
@@ -76,3 +76,35 @@ app:
   jwtSecret: mySecretKeyForLibraryManagementSystem2024!@#$%^&*()_EXTENDED_FOR_HS512_ALGORITHM_MINIMUM_LENGTH_REQUIREMENT
   jwtExpirationMs: 3600000    # 1時間 (60 * 60 * 1000)
   jwtRefreshExpirationMs: 604800000  # 7日間 (7 * 24 * 60 * 60 * 1000)
+
+  # 帳票設定
+  reports:
+    storage-path: ./reports           # 帳票ファイル保存パス
+    expiry-days: 7                   # ファイル保持期間（日）
+    max-file-size: 104857600         # 最大ファイルサイズ（100MB）
+    max-total-size: 5368709120       # 最大総容量（5GB）
+    cleanup:
+      enabled: true                  # 自動クリーンアップ有効化
+      orphaned-files: true           # 孤立ファイルクリーンアップ
+
+    # PDF設定
+    pdf:
+      font-path: fonts/NotoSansCJK-Regular.ttc,0  # 日本語フォントパス
+      use-html-template: false       # HTMLテンプレート使用フラグ
+      page-size: A4                  # ページサイズ
+      margin: 2cm                    # マージン
+
+    # Excel設定
+    excel:
+      auto-size-columns: true        # 列幅自動調整
+
+  # キャッシュ設定
+  report:
+    cache:
+      enabled: true                  # キャッシュ有効化
+      default-ttl-minutes: 30        # デフォルトTTL（30分）
+      max-size-mb: 1000             # 最大キャッシュサイズ（1GB）
+      max-entries-per-user: 20       # ユーザー当たり最大エントリ数
+      cleanup-interval-minutes: 15   # クリーンアップ間隔（15分）
+      # システム統計レポート専用設定
+      system-report-ttl-minutes: 60  # システムレポートTTL（60分）

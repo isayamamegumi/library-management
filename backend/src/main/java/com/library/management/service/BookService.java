@@ -63,9 +63,27 @@ public class BookService {
             System.out.println("=== BookService.getAllBooksByUser called for user: " + username + " ===");
             User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + username));
-            
+
             List<Book> books = bookRepository.findByUserIdWithAuthors(currentUser.getId());
             System.out.println("Found " + books.size() + " books for user: " + username);
+
+            // 著者情報のデバッグ出力
+            for (Book book : books) {
+                System.out.println("Book: " + book.getTitle());
+                System.out.println("  BookAuthors: " + (book.getBookAuthors() != null ? book.getBookAuthors().size() : "null"));
+                if (book.getBookAuthors() != null) {
+                    for (int i = 0; i < book.getBookAuthors().size(); i++) {
+                        var bookAuthor = book.getBookAuthors().get(i);
+                        System.out.println("    BookAuthor[" + i + "]: " + bookAuthor);
+                        if (bookAuthor != null && bookAuthor.getAuthor() != null) {
+                            System.out.println("      Author name: " + bookAuthor.getAuthor().getName());
+                        } else {
+                            System.out.println("      Author: null");
+                        }
+                    }
+                }
+            }
+
             return books;
         } catch (Exception e) {
             System.out.println("=== ERROR in BookService.getAllBooksByUser ===");
