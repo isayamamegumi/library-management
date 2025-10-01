@@ -41,6 +41,9 @@ const Navigation: React.FC = () => {
                   バッチ管理
                 </Link>
               )}
+              <Link to="/reports" className={`nav-link ${location.pathname === '/reports' ? 'active' : ''}`}>
+                帳票出力
+              </Link>
               <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
                 書籍一覧
               </Link>

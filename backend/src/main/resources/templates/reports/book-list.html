@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${reportTitle}">書籍一覧レポート</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: 'Noto Sans CJK JP', 'Yu Gothic', 'Hiragino Sans', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+        }
+
+        .header .generated-date {
+            font-size: 9pt;
+            color: #666;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        .summary {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-left: 4px solid #007bff;
+        }
+
+        .summary .total-count {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .filters {
+            margin-bottom: 20px;
+        }
+
+        .filters h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+            color: #555;
+        }
+
+        .filter-item {
+            margin-bottom: 3px;
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .book-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .book-table th {
+            background-color: #e9ecef;
+            border: 1px solid #dee2e6;
+            padding: 8px 5px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 9pt;
+        }
+
+        .book-table td {
+            border: 1px solid #dee2e6;
+            padding: 6px 5px;
+            font-size: 8pt;
+            vertical-align: top;
+        }
+
+        .book-table .col-no {
+            width: 8%;
+            text-align: center;
+        }
+
+        .book-table .col-title {
+            width: 35%;
+        }
+
+        .book-table .col-author {
+            width: 25%;
+        }
+
+        .book-table .col-publisher {
+            width: 15%;
+        }
+
+        .book-table .col-status {
+            width: 10%;
+            text-align: center;
+        }
+
+        .book-table .col-date {
+            width: 7%;
+            text-align: center;
+        }
+
+        .book-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .book-table tbody tr:hover {
+            background-color: #e3f2fd;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            font-style: italic;
+            color: #999;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+
+        /* ページブレーク制御 */
+        .page-break {
+            page-break-before: always;
+        }
+
+        .no-break {
+            page-break-inside: avoid;
+        }
+
+        /* 印刷時の調整 */
+        @media print {
+            body {
+                font-size: 9pt;
+            }
+
+            .book-table th {
+                font-size: 8pt;
+            }
+
+            .book-table td {
+                font-size: 7pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <div class="header">
+        <h1 th:text="${reportTitle}">書籍一覧レポート</h1>
+        <div class="generated-date" th:text="'生成日時: ' + ${generatedDate}">生成日時: 2024/01/01 10:00</div>
+    </div>
+
+    <!-- サマリー情報 -->
+    <div class="summary">
+        <div class="total-count" th:text="'総件数: ' + ${totalCount} + '件'">総件数: 0件</div>
+    </div>
+
+    <!-- フィルター情報 -->
+    <div class="filters" th:if="${filters != null}">
+        <h3>フィルター条件:</h3>
+
+        <div class="filter-item" th:if="${filters.readStatus != null and !filters.readStatus.isEmpty()}">
+            • 読書状況: <span th:text="${#strings.listJoin(filters.readStatus, ', ')}"></span>
+        </div>
+
+        <div class="filter-item" th:if="${filters.publisher != null and !#strings.isEmpty(filters.publisher)}">
+            • 出版社: <span th:text="${filters.publisher}"></span>
+        </div>
+
+        <div class="filter-item" th:if="${filters.author != null and !#strings.isEmpty(filters.author)}">
+            • 著者: <span th:text="${filters.author}"></span>
+        </div>
+
+        <div class="filter-item" th:if="${filters.genre != null and !#strings.isEmpty(filters.genre)}">
+            • ジャンル: <span th:text="${filters.genre}"></span>
+        </div>
+
+        <div class="filter-item" th:if="${filters.startDate != null or filters.endDate != null}">
+            • 登録期間:
+            <span th:text="${filters.startDate != null ? filters.startDate : ''}"></span>
+            ～
+            <span th:text="${filters.endDate != null ? filters.endDate : ''}"></span>
+        </div>
+    </div>
+
+    <!-- 書籍一覧テーブル -->
+    <div th:if="${books != null and !books.isEmpty()}" class="no-break">
+        <table class="book-table">
+            <thead>
+                <tr>
+                    <th class="col-no">No.</th>
+                    <th class="col-title">タイトル</th>
+                    <th class="col-author">著者</th>
+                    <th class="col-publisher">出版社</th>
+                    <th class="col-status">読書状況</th>
+                    <th class="col-date">登録日</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="book, iterStat : ${books}">
+                    <td class="col-no" th:text="${iterStat.count}">1</td>
+                    <td class="col-title" th:text="${book.title}">タイトル</td>
+                    <td class="col-author">
+                        <span th:if="${book.authors != null and !book.authors.isEmpty()}"
+                              th:text="${#strings.listJoin(book.authors.![name], ', ')}">著者名</span>
+                        <span th:if="${book.authors == null or book.authors.isEmpty()}">-</span>
+                    </td>
+                    <td class="col-publisher" th:text="${book.publisher ?: '-'}">出版社</td>
+                    <td class="col-status" th:text="${book.readStatus?.name ?: '-'}">未読</td>
+                    <td class="col-date"
+                        th:text="${book.createdAt != null ? #temporals.format(book.createdAt, 'yyyy/MM/dd') : '-'}">
+                        2024/01/01
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- データなしメッセージ -->
+    <div th:if="${books == null or books.isEmpty()}" class="no-data">
+        表示する書籍がありません。
+    </div>
+
+    <!-- フッター -->
+    <div class="footer">
+        蔵書管理システム - Generated by Library Management System
+    </div>
+</body>
+</html>
