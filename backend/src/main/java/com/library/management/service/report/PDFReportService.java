@@ -340,7 +340,7 @@ public class PDFReportService extends ReportService {
      */
     private Cell createCell(String content, TextAlignment alignment) {
         return new Cell()
-            .add(new Paragraph(content))
+            .add(new Paragraph(content != null ? content : ""))
             .setTextAlignment(alignment)
             .setPadding(3)
             .setFontSize(9);

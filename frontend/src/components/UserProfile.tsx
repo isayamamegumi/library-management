@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import './UserProfile.css';
 
 interface User {
@@ -22,6 +23,7 @@ interface ValidationErrors {
 }
 
 const UserProfile: React.FC = () => {
+  const { user: authUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [updateData, setUpdateData] = useState<UserUpdateData>({
@@ -38,8 +40,17 @@ const UserProfile: React.FC = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/users/me', {
-        credentials: 'include',
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch('/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -50,6 +61,7 @@ const UserProfile: React.FC = () => {
           email: userData.email
         }));
       } else if (response.status === 401) {
+        localStorage.removeItem('accessToken');
         navigate('/login');
       }
     } catch (error) {
@@ -118,12 +130,13 @@ const UserProfile: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`/api/users/me`, {
         method: 'PUT',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify(submitData),
       });
 
@@ -146,16 +159,20 @@ const UserProfile: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:8080/api/auth/logout', {
+      const token = localStorage.getItem('accessToken');
+      await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
-      sessionStorage.removeItem('user');
+      localStorage.removeItem('accessToken');
       navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
       // エラーでもログアウト処理を継続
-      sessionStorage.removeItem('user');
+      localStorage.removeItem('accessToken');
       navigate('/login');
     }
   };
@@ -191,17 +208,11 @@ const UserProfile: React.FC = () => {
             </div>
             
             <div className="profile-actions">
-              <button 
+              <button
                 onClick={() => setIsEditing(true)}
                 className="edit-button"
               >
                 編集
-              </button>
-              <button 
-                onClick={handleLogout}
-                className="logout-button"
-              >
-                ログアウト
               </button>
             </div>
           </div>

@@ -367,6 +367,47 @@ const BatchManagement: React.FC = () => {
                 </div>
               )}
 
+              {/* ジョブ別実行統計 */}
+              {statistics?.jobBreakdown && statistics.jobBreakdown.length > 0 && (
+                <div className="card" style={{ gridColumn: 'span 2' }}>
+                  <div className="card-header">
+                    <h3 className="card-title">ジョブ別実行統計（過去30日）</h3>
+                  </div>
+                  <div className="card-content">
+                    <div className="table-container">
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>ジョブ名</th>
+                            <th>実行回数</th>
+                            <th>成功</th>
+                            <th>失敗</th>
+                            <th>平均実行時間</th>
+                            <th>最終実行</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {statistics.jobBreakdown.map((job, index) => (
+                            <tr key={index}>
+                              <td>{job.job_name}</td>
+                              <td>{job.execution_count}</td>
+                              <td className="success">{job.success_count}</td>
+                              <td className="error">{job.failure_count}</td>
+                              <td>
+                                {job.avg_time_ms
+                                  ? formatDuration(job.avg_time_ms)
+                                  : 'N/A'}
+                              </td>
+                              <td>{job.last_execution ? formatDateTime(job.last_execution) : 'N/A'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 実行中ジョブ */}
               <div className="card">
                 <div className="card-header">

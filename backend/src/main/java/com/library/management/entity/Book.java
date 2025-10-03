@@ -30,7 +30,6 @@ public class Book {
     private LocalDate publishedDate;
     
     @Size(max = 13, message = "ISBN must be less than 13 characters")
-    @Column(unique = true)
     private String isbn;
     
     @ManyToOne(fetch = FetchType.EAGER)

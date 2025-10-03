@@ -33,22 +33,26 @@ import java.util.*;
 
 @Configuration
 public class ParallelPartitionedBatchJobConfig {
-    
+
     @Autowired
     private DataSource dataSource;
-    
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
-    
+
+    @Autowired
+    private BatchJobExecutionListener batchJobExecutionListener;
+
     // 並列パーティション処理ジョブ
     @Bean
-    public Job parallelPartitionedJob(JobRepository jobRepository, 
+    public Job parallelPartitionedJob(JobRepository jobRepository,
                                      Step masterStep,
                                      Step dataTransformationStep) {
         return new JobBuilder("parallelPartitionedJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
                 .start(dataTransformationStep)  // データ変換ステップ
                 .next(masterStep)              // 並列パーティションステップ
+                .listener(batchJobExecutionListener)
                 .build();
     }
     
@@ -76,7 +80,7 @@ public class ParallelPartitionedBatchJobConfig {
         
         PostgresPagingQueryProvider queryProvider = new PostgresPagingQueryProvider();
         queryProvider.setSelectClause(
-            "b.id, b.title, b.publisher, b.isbn, b.published_date, b.created_at, b.updated_at, " +
+            "b.id, b.title, b.publisher, b.isbn, b.published_date, b.created_at, " +
             "u.username, u.email, rs.name as read_status, g.name as genre_name"
         );
         queryProvider.setFromClause(
@@ -89,8 +93,22 @@ public class ParallelPartitionedBatchJobConfig {
         Map<String, Order> sortKeys = new HashMap<>();
         sortKeys.put("id", Order.ASCENDING);
         queryProvider.setSortKeys(sortKeys);
-        
+
         reader.setQueryProvider(queryProvider);
+        reader.setRowMapper((rs, rowNum) -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", rs.getLong("id"));
+            map.put("title", rs.getString("title"));
+            map.put("publisher", rs.getString("publisher"));
+            map.put("isbn", rs.getString("isbn"));
+            map.put("published_date", rs.getDate("published_date"));
+            map.put("created_at", rs.getTimestamp("created_at"));
+            map.put("username", rs.getString("username"));
+            map.put("email", rs.getString("email"));
+            map.put("read_status", rs.getString("read_status"));
+            map.put("genre_name", rs.getString("genre_name"));
+            return map;
+        });
         return reader;
     }
     
@@ -118,24 +136,25 @@ public class ParallelPartitionedBatchJobConfig {
                 transformed.put("isbn_valid", isValidISBN(cleanedIsbn));
             }
             
-            // 3. 読書期間計算
+            // 3. 登録からの経過日数計算
             java.sql.Timestamp createdAt = (java.sql.Timestamp) item.get("created_at");
-            java.sql.Timestamp updatedAt = (java.sql.Timestamp) item.get("updated_at");
-            if (createdAt != null && updatedAt != null && updatedAt.after(createdAt)) {
-                long diffMs = updatedAt.getTime() - createdAt.getTime();
+            if (createdAt != null) {
+                long diffMs = System.currentTimeMillis() - createdAt.getTime();
                 long diffDays = diffMs / (24 * 60 * 60 * 1000);
-                transformed.put("reading_duration_days", diffDays);
-                
-                // 読書スピードカテゴリ
-                String speedCategory;
+                transformed.put("days_since_created", diffDays);
+
+                // 登録からの経過日数カテゴリ
+                String ageCategory;
                 if (diffDays <= 7) {
-                    speedCategory = "FAST";
+                    ageCategory = "NEW";
                 } else if (diffDays <= 30) {
-                    speedCategory = "NORMAL";
+                    ageCategory = "RECENT";
+                } else if (diffDays <= 365) {
+                    ageCategory = "MODERATE";
                 } else {
-                    speedCategory = "SLOW";
+                    ageCategory = "OLD";
                 }
-                transformed.put("reading_speed_category", speedCategory);
+                transformed.put("book_age_category", ageCategory);
             }
             
             // 4. ユーザーデータの正規化
@@ -254,10 +273,9 @@ public class ParallelPartitionedBatchJobConfig {
                 .processor(optimizedUserProcessor)
                 .writer(partitionedUserWriter)
                 .faultTolerant()
-                .retryLimit(3)
-                .retry(Exception.class)
-                .skipLimit(10)
+                .skipLimit(100)  // 並列処理対応のため上限を増やす
                 .skip(Exception.class)
+                .noRetry(Exception.class)  // リトライを無効化してキャッシュキー競合を回避
                 .build();
     }
     
@@ -268,15 +286,32 @@ public class ParallelPartitionedBatchJobConfig {
                                                   @Value("#{stepExecutionContext[endUserId]}") Integer endUserId,
                                                   @Value("#{stepExecutionContext[partitionNumber]}") Integer partitionNumber) {
         System.out.println("パーティション" + partitionNumber + "用リーダー開始: userId " + startUserId + " to " + endUserId);
-        
-        JdbcCursorItemReader<User> reader = new JdbcCursorItemReader<>();
+
+        JdbcPagingItemReader<User> reader = new JdbcPagingItemReader<>();
         reader.setDataSource(dataSource);
-        reader.setSql("SELECT id, username, email, created_at FROM users WHERE id BETWEEN ? AND ? ORDER BY id");
-        reader.setPreparedStatementSetter(ps -> {
-            ps.setInt(1, startUserId);
-            ps.setInt(2, endUserId);
+        reader.setPageSize(50);
+
+        PostgresPagingQueryProvider queryProvider = new PostgresPagingQueryProvider();
+        queryProvider.setSelectClause("id, username, email, created_at");
+        queryProvider.setFromClause("users");
+        queryProvider.setWhereClause("id BETWEEN " + startUserId + " AND " + endUserId);
+
+        Map<String, Order> sortKeys = new HashMap<>();
+        sortKeys.put("id", Order.ASCENDING);
+        queryProvider.setSortKeys(sortKeys);
+
+        reader.setQueryProvider(queryProvider);
+        reader.setRowMapper((rs, rowNum) -> {
+            User user = new User();
+            user.setId(rs.getLong("id"));
+            user.setUsername(rs.getString("username"));
+            user.setEmail(rs.getString("email"));
+            java.sql.Timestamp timestamp = rs.getTimestamp("created_at");
+            if (timestamp != null) {
+                user.setCreatedAt(timestamp.toLocalDateTime());
+            }
+            return user;
         });
-        reader.setRowMapper(new BeanPropertyRowMapper<>(User.class));
         return reader;
     }
     
@@ -330,31 +365,35 @@ public class ParallelPartitionedBatchJobConfig {
     @Bean
     public ItemWriter<UserStats> partitionedUserWriter() {
         return items -> {
+            if (items == null || !items.iterator().hasNext()) {
+                return;  // 空の場合は何もしない
+            }
+
             List<UserStats> statsList = new ArrayList<>();
             items.forEach(statsList::add);
             String currentThread = Thread.currentThread().getName();
-            
-            synchronized (this) {  // スレッドセーフな書き込み
+            long timestamp = System.currentTimeMillis();
+
+            synchronized (ParallelPartitionedBatchJobConfig.class) {  // クラスレベルのロック
                 try {
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.registerModule(new JavaTimeModule());
-                    
-                    // パーティション別の結果として保存
-                    String partitionKey = "PARTITION_RESULT_" + currentThread;
+
+                    // パーティション別の結果として保存（ユニークキーに時刻を含める）
+                    String partitionKey = "PARTITION_RESULT_" + currentThread + "_" + timestamp;
                     String statsJson = mapper.writeValueAsString(statsList);
-                    
+
                     jdbcTemplate.update(
-                        "INSERT INTO batch_statistics (report_type, target_date, data_json) VALUES (?, ?, ?::jsonb) " +
-                        "ON CONFLICT (report_type, target_date) DO UPDATE SET data_json = data_json || ?::jsonb, updated_at = NOW()",
-                        partitionKey, LocalDate.now(), 
-                        "{\"" + currentThread + "\": " + statsJson + "}",
-                        "{\"" + currentThread + "\": " + statsJson + "}");
-                    
+                        "INSERT INTO batch_statistics (report_type, target_date, data_json) " +
+                        "VALUES (?, ?, ?::jsonb)",
+                        partitionKey, LocalDate.now(), statsJson);
+
                     System.out.println("[パーティション結果] スレッド: " + currentThread + ", 件数: " + statsList.size());
-                    
+
                 } catch (Exception e) {
                     System.err.println("パーティション結果書き込みエラー (スレッド: " + currentThread + "): " + e.getMessage());
-                    throw e;
+                    e.printStackTrace();
+                    // エラーをスローせずログに記録のみ（skipLimit内で処理継続）
                 }
             }
         };

@@ -22,29 +22,22 @@ import java.time.LocalDateTime;
 
 @Component
 public class ReadingPaceAnalysisBatchJob {
-    
+
     @Autowired
     private ReadingPaceAnalysisProcessor paceAnalysisProcessor;
-    
+
     @Autowired
     private ReadingPaceAnalysisWriter paceAnalysisWriter;
 
+    @Autowired
+    private BatchJobExecutionListener batchJobExecutionListener;
+
     @Bean(name = "readingPaceAnalysisJob")
-    public Job readingPaceAnalysisJob(JobRepository jobRepository, 
+    public Job readingPaceAnalysisJob(JobRepository jobRepository,
                                      Step paceAnalysisStep) {
         return new JobBuilder("readingPaceAnalysisJob", jobRepository)
                 .start(paceAnalysisStep)
-                .listener(new JobExecutionListener() {
-                    @Override
-                    public void beforeJob(org.springframework.batch.core.JobExecution jobExecution) {
-                        System.out.println("読書ペース分析バッチ開始: " + LocalDateTime.now());
-                    }
-                    
-                    @Override
-                    public void afterJob(org.springframework.batch.core.JobExecution jobExecution) {
-                        System.out.println("読書ペース分析バッチ完了: " + jobExecution.getStatus());
-                    }
-                })
+                .listener(batchJobExecutionListener)
                 .build();
     }
     

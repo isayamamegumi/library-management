@@ -118,6 +118,7 @@ public class ReportCacheService {
     /**
      * 帳票をキャッシュに保存
      */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public ReportCache cacheReport(Long userId, ReportRequest request, String filePath,
                                   Integer recordCount, Long generationTimeMs) {
         if (!cacheEnabled) {
@@ -136,22 +137,19 @@ public class ReportCacheService {
 
             String parametersJson = objectMapper.writeValueAsString(request);
 
-            // 既存キャッシュエントリ確認
-            Optional<ReportCache> existingOpt = cacheRepository.findValidCache(
-                userId, request.getReportType(), request.getFormat(),
-                parametersJson, LocalDateTime.now()
-            );
+            // 既存キャッシュエントリ確認（cacheKeyベースで検索）
+            Optional<ReportCache> existingOpt = cacheRepository.findByCacheKeyAndIsValidTrue(cacheKey);
 
             ReportCache cache;
             if (existingOpt.isPresent()) {
                 // 既存エントリ更新
                 cache = existingOpt.get();
-                logger.debug("既存キャッシュエントリ更新: id={}", cache.getId());
+                logger.debug("既存キャッシュエントリ更新: id={}, cacheKey={}", cache.getId(), cacheKey);
             } else {
                 // 新規エントリ作成
                 cache = new ReportCache(cacheKey, userId, request.getReportType(),
                     request.getFormat(), parametersJson);
-                logger.debug("新規キャッシュエントリ作成");
+                logger.debug("新規キャッシュエントリ作成: cacheKey={}", cacheKey);
             }
 
             // ファイル情報設定
@@ -175,6 +173,23 @@ public class ReportCacheService {
 
             return savedCache;
 
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // ユニーク制約違反の場合は既存エントリを取得して更新を試みる
+            logger.warn("キャッシュキー重複検出、既存エントリを更新します: userId={}", userId);
+            try {
+                String cacheKey = generateCacheKey(userId, request);
+                Optional<ReportCache> existingOpt = cacheRepository.findByCacheKeyAndIsValidTrue(cacheKey);
+                if (existingOpt.isPresent()) {
+                    ReportCache cache = existingOpt.get();
+                    File file = new File(filePath);
+                    cache.markCompleted(filePath, file.length(), recordCount, generationTimeMs);
+                    cache.setExpiresAt(LocalDateTime.now().plusMinutes(getTtlMinutes(request)));
+                    return cacheRepository.save(cache);
+                }
+            } catch (Exception ex) {
+                logger.error("キャッシュ更新リトライ失敗", ex);
+            }
+            return null;
         } catch (Exception e) {
             logger.error("キャッシュ保存エラー: userId={}, filePath={}", userId, filePath, e);
             return null;
