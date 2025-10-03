@@ -56,15 +56,61 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-        
+        com.library.management.security.UserPrincipal userPrincipal =
+            (com.library.management.security.UserPrincipal) auth.getPrincipal();
+
+        // UserPrincipalからユーザーIDを取得し、データベースから完全なユーザー情報を取得
+        Optional<User> userOpt = userRepository.findById(userPrincipal.getId());
+        if (!userOpt.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        User currentUser = userOpt.get();
         Map<String, Object> response = new HashMap<>();
         response.put("id", currentUser.getId());
         response.put("username", currentUser.getUsername());
         response.put("email", currentUser.getEmail());
         response.put("role", currentUser.getRole().getName());
         response.put("createdAt", currentUser.getCreatedAt());
-        
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/me")
+    public ResponseEntity<?> updateCurrentUser(@Valid @RequestBody UserUpdateRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        com.library.management.security.UserPrincipal userPrincipal =
+            (com.library.management.security.UserPrincipal) auth.getPrincipal();
+
+        Optional<User> optionalUser = userRepository.findById(userPrincipal.getId());
+        if (!optionalUser.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        User user = optionalUser.get();
+
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Email is already in use"));
+            }
+            user.setEmail(request.getEmail());
+        }
+
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        User updatedUser = userRepository.save(user);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", updatedUser.getId());
+        response.put("username", updatedUser.getUsername());
+        response.put("email", updatedUser.getEmail());
+        response.put("role", updatedUser.getRole().getName());
+        response.put("message", "User updated successfully");
+
         return ResponseEntity.ok(response);
     }
 

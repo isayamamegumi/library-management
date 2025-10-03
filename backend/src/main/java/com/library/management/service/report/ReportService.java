@@ -108,11 +108,17 @@ public abstract class ReportService {
             Long generationEndTime = System.currentTimeMillis();
             Long generationTime = generationEndTime - generationStartTime;
 
-            // 5. キャッシュ保存
-            logger.debug("ステップ5: キャッシュ保存");
+            // レコード数取得
             Integer recordCount = getRecordCount(userId, request);
-            reportCacheService.cacheReport(userId, request, filePath, recordCount, generationTime);
-            logger.debug("キャッシュ保存完了");
+
+            // 5. キャッシュ保存（エラーが起きても処理を継続）
+            logger.debug("ステップ5: キャッシュ保存");
+            try {
+                reportCacheService.cacheReport(userId, request, filePath, recordCount, generationTime);
+                logger.debug("キャッシュ保存完了");
+            } catch (Exception cacheException) {
+                logger.warn("キャッシュ保存でエラーが発生しましたが、帳票生成は継続します: {}", cacheException.getMessage());
+            }
 
             // 6. 履歴更新
             logger.debug("ステップ6: 履歴更新");

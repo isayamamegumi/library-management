@@ -15,21 +15,24 @@ import java.time.LocalDateTime;
 
 @Component
 public class PeriodicalStatsBatchJob {
-    
+
     @Autowired
     private WeeklyStatsTasklet weeklyStatsTasklet;
-    
+
     @Autowired
     private MonthlyStatsTasklet monthlyStatsTasklet;
-    
+
     @Autowired
     private QuarterlyStatsTasklet quarterlyStatsTasklet;
-    
+
     @Autowired
     private YearlyStatsTasklet yearlyStatsTasklet;
 
+    @Autowired
+    private BatchJobExecutionListener batchJobExecutionListener;
+
     @Bean(name = "periodicalStatsJob")
-    public Job periodicalStatsJob(JobRepository jobRepository, 
+    public Job periodicalStatsJob(JobRepository jobRepository,
                                  Step weeklyStatsStep,
                                  Step monthlyStatsStep,
                                  Step quarterlyStatsStep,
@@ -39,17 +42,7 @@ public class PeriodicalStatsBatchJob {
                 .next(monthlyStatsStep)
                 .next(quarterlyStatsStep)
                 .next(yearlyStatsStep)
-                .listener(new JobExecutionListener() {
-                    @Override
-                    public void beforeJob(org.springframework.batch.core.JobExecution jobExecution) {
-                        System.out.println("期間別統計バッチ開始: " + LocalDateTime.now());
-                    }
-                    
-                    @Override
-                    public void afterJob(org.springframework.batch.core.JobExecution jobExecution) {
-                        System.out.println("期間別統計バッチ完了: " + jobExecution.getStatus());
-                    }
-                })
+                .listener(batchJobExecutionListener)
                 .build();
     }
     

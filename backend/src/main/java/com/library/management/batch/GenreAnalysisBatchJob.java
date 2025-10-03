@@ -21,32 +21,25 @@ import java.time.LocalDateTime;
 
 @Component
 public class GenreAnalysisBatchJob {
-    
+
     @Autowired
     private GenreReader genreReader;
-    
+
     @Autowired
     private GenreAnalysisProcessor genreAnalysisProcessor;
-    
+
     @Autowired
     private GenreAnalysisWriter genreAnalysisWriter;
 
+    @Autowired
+    private BatchJobExecutionListener batchJobExecutionListener;
+
     @Bean(name = "genreAnalysisJob")
-    public Job genreAnalysisJob(JobRepository jobRepository, 
+    public Job genreAnalysisJob(JobRepository jobRepository,
                                Step genreAnalysisStep) {
         return new JobBuilder("genreAnalysisJob", jobRepository)
                 .start(genreAnalysisStep)
-                .listener(new JobExecutionListener() {
-                    @Override
-                    public void beforeJob(org.springframework.batch.core.JobExecution jobExecution) {
-                        System.out.println("ジャンル分析バッチ開始: " + LocalDateTime.now());
-                    }
-                    
-                    @Override
-                    public void afterJob(org.springframework.batch.core.JobExecution jobExecution) {
-                        System.out.println("ジャンル分析バッチ完了: " + jobExecution.getStatus());
-                    }
-                })
+                .listener(batchJobExecutionListener)
                 .build();
     }
     

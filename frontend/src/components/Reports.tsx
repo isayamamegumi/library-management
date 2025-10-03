@@ -177,7 +177,7 @@ const PreviewFrame: React.FC<{ reportId: number }> = ({ reportId }) => {
     try {
       const token = localStorage.getItem('accessToken');
       // バックエンドで対応しているレポートタイプに変換
-      const backendReportType = reportType === 'personal' ? 'BOOK_LIST' :
+      const backendReportType = reportType === 'personal' ? 'PERSONAL' :
                                 reportType === 'system' ? 'SYSTEM' : reportType;
 
       const request: ReportRequest = {

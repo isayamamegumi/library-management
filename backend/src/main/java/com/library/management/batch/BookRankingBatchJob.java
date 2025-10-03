@@ -15,21 +15,24 @@ import java.time.LocalDateTime;
 
 @Component
 public class BookRankingBatchJob {
-    
+
     @Autowired
     private PopularityRankingTasklet popularityRankingTasklet;
-    
+
     @Autowired
     private CompletionRankingTasklet completionRankingTasklet;
-    
+
     @Autowired
     private AuthorRankingTasklet authorRankingTasklet;
-    
+
     @Autowired
     private GenreRankingTasklet genreRankingTasklet;
 
+    @Autowired
+    private BatchJobExecutionListener batchJobExecutionListener;
+
     @Bean(name = "bookRankingJob")
-    public Job bookRankingJob(JobRepository jobRepository, 
+    public Job bookRankingJob(JobRepository jobRepository,
                              Step popularityRankingStep,
                              Step completionRankingStep,
                              Step authorRankingStep,
@@ -39,17 +42,7 @@ public class BookRankingBatchJob {
                 .next(completionRankingStep)
                 .next(authorRankingStep)
                 .next(genreRankingStep)
-                .listener(new JobExecutionListener() {
-                    @Override
-                    public void beforeJob(org.springframework.batch.core.JobExecution jobExecution) {
-                        System.out.println("書籍ランキングバッチ開始: " + LocalDateTime.now());
-                    }
-                    
-                    @Override
-                    public void afterJob(org.springframework.batch.core.JobExecution jobExecution) {
-                        System.out.println("書籍ランキングバッチ完了: " + jobExecution.getStatus());
-                    }
-                })
+                .listener(batchJobExecutionListener)
                 .build();
     }
     

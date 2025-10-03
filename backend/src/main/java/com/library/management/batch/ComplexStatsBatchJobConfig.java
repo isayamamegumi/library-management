@@ -31,17 +31,20 @@ import java.util.*;
 
 @Configuration
 public class ComplexStatsBatchJobConfig {
-    
+
     @Autowired
     private DataSource dataSource;
-    
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private BatchJobExecutionListener batchJobExecutionListener;
     
     // 複数テーブル結合での集計処理ジョブ
     @Bean
-    public Job complexStatsJob(JobRepository jobRepository, 
-                              Step complexUserAnalysisStep, 
+    public Job complexStatsJob(JobRepository jobRepository,
+                              Step complexUserAnalysisStep,
                               Step complexGenreAnalysisStep,
                               Step complexReadingPaceAnalysisStep) {
         return new JobBuilder("complexStatsJob", jobRepository)
@@ -49,17 +52,7 @@ public class ComplexStatsBatchJobConfig {
                 .start(complexUserAnalysisStep)
                 .next(complexGenreAnalysisStep)
                 .next(complexReadingPaceAnalysisStep)
-                .listener(new JobExecutionListener() {
-                    @Override
-                    public void beforeJob(JobExecution jobExecution) {
-                        System.out.println("複集計ジョブ開始: " + LocalDateTime.now());
-                    }
-                    
-                    @Override
-                    public void afterJob(JobExecution jobExecution) {
-                        System.out.println("複集計ジョブ完了: " + jobExecution.getStatus() + " at " + LocalDateTime.now());
-                    }
-                })
+                .listener(batchJobExecutionListener)
                 .build();
     }
     
@@ -95,9 +88,8 @@ public class ComplexStatsBatchJobConfig {
             "COUNT(CASE WHEN rs.name = '読書中' THEN 1 END) as reading_books, " +
             "COUNT(CASE WHEN rs.name = '未読' THEN 1 END) as unread_books, " +
             "COALESCE(MAX(g.name), 'N/A') as favorite_genre, " +
-            "AVG(EXTRACT(EPOCH FROM (b.updated_at - b.created_at))/86400) as avg_reading_days, " +
-            "COUNT(CASE WHEN b.created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as books_last_30_days, " +
-            "COUNT(CASE WHEN b.created_at >= CURRENT_DATE - INTERVAL '365 days' THEN 1 END) as books_last_year"
+            "COUNT(CASE WHEN b.created_at >= CURRENT_DATE - CAST('30 days' AS INTERVAL) THEN 1 END) as books_last_30_days, " +
+            "COUNT(CASE WHEN b.created_at >= CURRENT_DATE - CAST('365 days' AS INTERVAL) THEN 1 END) as books_last_year"
         );
         queryProvider.setFromClause(
             "users u " +
@@ -111,8 +103,21 @@ public class ComplexStatsBatchJobConfig {
         Map<String, Order> sortKeys = new HashMap<>();
         sortKeys.put("user_id", Order.ASCENDING);
         queryProvider.setSortKeys(sortKeys);
-        
+
         reader.setQueryProvider(queryProvider);
+        reader.setRowMapper((rs, rowNum) -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("user_id", rs.getLong("user_id"));
+            map.put("username", rs.getString("username"));
+            map.put("total_books", rs.getInt("total_books"));
+            map.put("completed_books", rs.getInt("completed_books"));
+            map.put("reading_books", rs.getInt("reading_books"));
+            map.put("unread_books", rs.getInt("unread_books"));
+            map.put("favorite_genre", rs.getString("favorite_genre"));
+            map.put("books_last_30_days", rs.getInt("books_last_30_days"));
+            map.put("books_last_year", rs.getInt("books_last_year"));
+            return map;
+        });
         return reader;
     }
     
@@ -173,13 +178,12 @@ public class ComplexStatsBatchJobConfig {
                     
                     // ジャンル別詳細統計
                     List<Map<String, Object>> genreStats = jdbcTemplate.queryForList("""
-                        SELECT 
+                        SELECT
                             g.name as genre_name,
                             COUNT(b.id) as total_books,
                             COUNT(CASE WHEN rs.name = '読了' THEN 1 END) as completed_books,
                             COUNT(DISTINCT b.user_id) as unique_readers,
-                            AVG(CASE WHEN rs.name = '読了' THEN EXTRACT(EPOCH FROM (b.updated_at - b.created_at))/86400 END) as avg_reading_days,
-                            COUNT(CASE WHEN b.created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as books_last_30_days,
+                            COUNT(CASE WHEN b.created_at >= CURRENT_DATE - CAST('30 days' AS INTERVAL) THEN 1 END) as books_last_30_days,
                             ROUND(
                                 COUNT(CASE WHEN rs.name = '読了' THEN 1 END) * 100.0 / NULLIF(COUNT(b.id), 0), 2
                             ) as completion_rate
@@ -193,7 +197,7 @@ public class ComplexStatsBatchJobConfig {
                     
                     // 人気ジャンルランキング
                     List<Map<String, Object>> popularGenres = jdbcTemplate.queryForList("""
-                        SELECT 
+                        SELECT
                             g.name as genre_name,
                             COUNT(DISTINCT b.user_id) as reader_count,
                             COUNT(b.id) as book_count,
@@ -201,7 +205,7 @@ public class ComplexStatsBatchJobConfig {
                         FROM genres g
                         LEFT JOIN books b ON g.id = b.genre_id
                         LEFT JOIN read_statuses rs ON b.read_status_id = rs.id
-                        WHERE b.created_at >= CURRENT_DATE - INTERVAL '90 days'
+                        WHERE b.created_at >= CURRENT_DATE - CAST('90 days' AS INTERVAL)
                         GROUP BY g.id, g.name
                         HAVING COUNT(b.id) >= 3
                         ORDER BY reader_count DESC, completion_rate DESC
@@ -210,13 +214,13 @@ public class ComplexStatsBatchJobConfig {
                     
                     // シーズン分析（月別トレンド）
                     List<Map<String, Object>> seasonalTrends = jdbcTemplate.queryForList("""
-                        SELECT 
+                        SELECT
                             g.name as genre_name,
                             EXTRACT(MONTH FROM b.created_at) as month,
                             COUNT(b.id) as book_count
                         FROM genres g
                         JOIN books b ON g.id = b.genre_id
-                        WHERE b.created_at >= CURRENT_DATE - INTERVAL '12 months'
+                        WHERE b.created_at >= CURRENT_DATE - CAST('12 months' AS INTERVAL)
                         GROUP BY g.id, g.name, EXTRACT(MONTH FROM b.created_at)
                         ORDER BY g.name, month
                         """);
@@ -252,32 +256,24 @@ public class ComplexStatsBatchJobConfig {
                     // ユーザー別読書ペース分析
                     List<Map<String, Object>> readingPaceData = jdbcTemplate.queryForList("""
                         WITH user_reading_stats AS (
-                            SELECT 
+                            SELECT
                                 u.id as user_id,
                                 u.username,
                                 COUNT(CASE WHEN rs.name = '読了' THEN 1 END) as completed_count,
-                                AVG(CASE WHEN rs.name = '読了' AND b.updated_at > b.created_at 
-                                    THEN EXTRACT(EPOCH FROM (b.updated_at - b.created_at))/86400 END) as avg_reading_days,
-                                COUNT(CASE WHEN b.created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as books_last_30_days,
-                                COUNT(CASE WHEN b.created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as books_last_7_days
+                                COUNT(CASE WHEN b.created_at >= CURRENT_DATE - CAST('30 days' AS INTERVAL) THEN 1 END) as books_last_30_days,
+                                COUNT(CASE WHEN b.created_at >= CURRENT_DATE - CAST('7 days' AS INTERVAL) THEN 1 END) as books_last_7_days
                             FROM users u
                             LEFT JOIN books b ON u.id = b.user_id
                             LEFT JOIN read_statuses rs ON b.read_status_id = rs.id
                             GROUP BY u.id, u.username
                         )
-                        SELECT 
+                        SELECT
                             user_id,
                             username,
                             completed_count,
-                            ROUND(COALESCE(avg_reading_days, 0), 2) as avg_reading_days,
                             books_last_30_days,
                             books_last_7_days,
-                            CASE 
-                                WHEN avg_reading_days <= 7 THEN 'Fast'
-                                WHEN avg_reading_days <= 21 THEN 'Normal'
-                                ELSE 'Slow'
-                            END as reading_pace_category,
-                            CASE 
+                            CASE
                                 WHEN books_last_7_days >= 2 THEN 'Very Active'
                                 WHEN books_last_7_days = 1 THEN 'Active'
                                 WHEN books_last_30_days >= 1 THEN 'Moderate'
@@ -290,12 +286,10 @@ public class ComplexStatsBatchJobConfig {
                     
                     // システム全体の読書統計
                     Map<String, Object> systemStats = jdbcTemplate.queryForMap("""
-                        SELECT 
+                        SELECT
                             COUNT(DISTINCT u.id) as active_users,
                             COUNT(b.id) as total_books,
                             COUNT(CASE WHEN rs.name = '読了' THEN 1 END) as completed_books,
-                            ROUND(AVG(CASE WHEN rs.name = '読了' AND b.updated_at > b.created_at 
-                                THEN EXTRACT(EPOCH FROM (b.updated_at - b.created_at))/86400 END), 2) as system_avg_reading_days,
                             ROUND(COUNT(CASE WHEN rs.name = '読了' THEN 1 END) * 100.0 / NULLIF(COUNT(b.id), 0), 2) as system_completion_rate
                         FROM users u
                         LEFT JOIN books b ON u.id = b.user_id

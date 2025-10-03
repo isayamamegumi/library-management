@@ -21,10 +21,13 @@ import java.util.Map;
 
 @Configuration
 public class BatchChainFlowJobConfig {
-    
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
-    
+
+    @Autowired
+    private BatchJobExecutionListener batchJobExecutionListener;
+
     // バッチチェーン処理ジョブ（条件分岐フロー付き）
     @Bean
     public Job batchChainFlowJob(JobRepository jobRepository,
@@ -54,6 +57,7 @@ public class BatchChainFlowJobConfig {
                 // 6. クリーンアップ後の終了処理
                 .from(cleanupStep).on("*").to(notificationStep)
                 .end()
+                .listener(batchJobExecutionListener)
                 .build();
     }
     

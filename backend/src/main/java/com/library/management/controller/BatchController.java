@@ -114,42 +114,44 @@ public class BatchController {
         try {
             // ジョブ実行統計
             Map<String, Object> jobStats = jdbcTemplate.queryForMap("""
-                SELECT 
+                SELECT
                     COUNT(*) as total_executions,
                     COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_executions,
                     COUNT(CASE WHEN status = 'FAILED' THEN 1 END) as failed_executions,
                     COUNT(CASE WHEN status = 'STARTED' THEN 1 END) as running_executions,
-                    ROUND(AVG(CASE WHEN execution_time_ms IS NOT NULL THEN execution_time_ms END)) as avg_execution_time_ms,
+                    ROUND(AVG(CASE WHEN end_time IS NOT NULL AND start_time IS NOT NULL
+                        THEN EXTRACT(EPOCH FROM (end_time - start_time)) * 1000 END)) as avg_execution_time_ms,
                     COALESCE(SUM(read_count), 0) as total_read_count,
                     COALESCE(SUM(write_count), 0) as total_write_count
                 FROM batch_execution_logs
-                WHERE start_time >= CURRENT_DATE - INTERVAL '30 days'
+                WHERE start_time >= CURRENT_DATE - CAST('30 days' AS INTERVAL)
                 """);
             
             // ジョブ別統計
             List<Map<String, Object>> jobBreakdown = jdbcTemplate.queryForList("""
-                SELECT 
+                SELECT
                     job_name,
                     COUNT(*) as execution_count,
                     COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as success_count,
                     COUNT(CASE WHEN status = 'FAILED' THEN 1 END) as failure_count,
-                    ROUND(AVG(CASE WHEN execution_time_ms IS NOT NULL THEN execution_time_ms END)) as avg_time_ms,
+                    ROUND(AVG(CASE WHEN end_time IS NOT NULL AND start_time IS NOT NULL
+                        THEN EXTRACT(EPOCH FROM (end_time - start_time)) * 1000 END)) as avg_time_ms,
                     MAX(start_time) as last_execution
                 FROM batch_execution_logs
-                WHERE start_time >= CURRENT_DATE - INTERVAL '30 days'
+                WHERE start_time >= CURRENT_DATE - CAST('30 days' AS INTERVAL)
                 GROUP BY job_name
                 ORDER BY execution_count DESC
                 """);
             
             // 統計データの可用性
             List<Map<String, Object>> availableReports = jdbcTemplate.queryForList("""
-                SELECT 
+                SELECT
                     report_type,
                     target_date,
                     created_at,
                     updated_at
                 FROM batch_statistics
-                WHERE target_date >= CURRENT_DATE - INTERVAL '30 days'
+                WHERE target_date >= CURRENT_DATE - CAST('30 days' AS INTERVAL)
                 ORDER BY updated_at DESC
                 """);
             
@@ -157,12 +159,17 @@ public class BatchController {
             response.put("jobStatistics", jobStats);
             response.put("jobBreakdown", jobBreakdown);
             response.put("availableReports", availableReports);
-            response.put("availableJobs", batchManagementService.getAvailableJobs());
+
+            Map<String, String> availableJobs = batchManagementService.getAvailableJobs();
+            System.out.println("[DEBUG] Available jobs: " + availableJobs);
+            response.put("availableJobs", availableJobs);
             response.put("generatedAt", LocalDateTime.now());
 
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("[ERROR] Statistics error: " + e.getClass().getName() + ": " + e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "統計情報取得エラー: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);

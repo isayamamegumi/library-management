@@ -1,5 +1,7 @@
 package com.library.management.dto;
 
+import com.library.management.validation.NoPlatformDependentChars;
+import com.library.management.validation.NoPlatformDependentCharsInList;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -7,24 +9,27 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class BookRequest {
-    
+
     @NotBlank(message = "Title is required")
     @Size(max = 255, message = "Title must be less than 255 characters")
+    @NoPlatformDependentChars(message = "タイトルに環境依存文字を使用しないでください")
     private String title;
-    
+
     @Size(max = 255, message = "Publisher must be less than 255 characters")
+    @NoPlatformDependentChars(message = "出版社名に環境依存文字を使用しないでください")
     private String publisher;
-    
+
     private LocalDate publishedDate;
-    
+
     @Size(max = 13, message = "ISBN must be less than 13 characters")
     private String isbn;
-    
+
     @Size(max = 50, message = "Read status must be less than 50 characters")
     private String readStatus;
-    
+
     private Long genreId;
-    
+
+    @NoPlatformDependentCharsInList(message = "著者名に環境依存文字を使用しないでください")
     private List<String> authorNames;
     
     public BookRequest() {}
